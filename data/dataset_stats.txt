@@ -1,0 +1,19 @@
+venues with single blind reviews: 95
+venues with double blind reviews: 277
+total venues: 372
+
+submissions single blind: 1809
+submissions double blind: 22902
+total submissions: 24711
+
+reviews single blind: 5265
+reviews double blind: 80211
+total reviews: 85476
+
+avg. reviews/submission single blind: 2.91
+avg. reviews/submission double blind: 3.50
+total avg. reviews/submission: 3.46
+
+post acceptance deanonymized reviews single blind: 218
+post acceptance deanonymized reviews double blind: 0
+total post acceptance deanonymized reviews: 218

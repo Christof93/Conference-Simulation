@@ -151,7 +151,7 @@ def enrich_peer_review_data(peer_reviews: dict, papers: dict):
     return confs_by_year
     
 def save_to_disk(dict_var, dict_name):
-    with open(f"{dict_name}-{datetime.now().strftime('%d-%m-%Y')}", 'wb') as f:
+    with open(f"{dict_name}-{datetime.now().strftime('%d-%m-%Y')}.pickle", 'wb') as f:
         pickle.dump(dict(dict_var), f, pickle.HIGHEST_PROTOCOL)
 
 

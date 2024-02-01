@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__
+crawling_or_env/
+openreview-py/
+openreview-clone/
+*.json
+*.pickle
+retractions.csv
+nlpeer_v0.1_nopdf
+data/credentials.env
