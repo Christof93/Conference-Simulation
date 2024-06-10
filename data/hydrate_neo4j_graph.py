@@ -1,15 +1,17 @@
 import pickle
 import random
+import csv
 random.seed(42)
 import json
 from itertools import zip_longest
 from tqdm import tqdm
 from neo4j import GraphDatabase
+from scholarly import scholarly, ProxyGenerator
 from collections import defaultdict
 
 from get_data_from_f1000 import get_f1000_data
 
-uri = "neo4j://localhost:7687"
+URI = "neo4j://localhost:7687"
 
 OR_DB_SETUP_SCRIPTS = [
 """//Add normalized score
@@ -221,6 +223,169 @@ def make_reviewer_relation(driver, db_name, paper_info, paper_review_tuples):
 def set_constraint(driver, db_name, node_label, property):
     driver.execute_query(f"CREATE CONSTRAINT {node_label.lower()}_unique_{property} FOR (n:{node_label}) REQUIRE n.{property} IS UNIQUE", database_=db_name)
 
+def get_author_batch(size=50):
+    with GraphDatabase.driver(URI, auth=("neo4j", "openreview")) as driver:
+        batch = run_cypher_match(
+        driver,
+        "open-review-data",
+        f"MATCH (a:Author) WHERE a.scholar_id IS NULL RETURN a.id AS id, a.name AS name LIMIT {size}",
+    )
+    return batch
+
+
+def find_author_info_gscholar(id, name):
+    if "@" in id:
+        domain = id.split("@")[1]
+        search_query = scholarly.search_author(f'{name}, {domain}')
+        # Retrieve the first result from the iterator
+        try:
+            first_author_result = next(search_query)
+        except StopIteration:
+            search_query = scholarly.search_author(f'{name}')
+            try:
+                first_author_result = next(search_query)
+            except StopIteration:
+                return
+        try:
+            more_info = scholarly.fill(first_author_result, sections=["indices"])
+            del more_info["container_type"]
+            del more_info["name"]
+            del more_info["source"]
+            del more_info["url_picture"]
+            del more_info["filled"]
+            return more_info
+        except:
+            print("Couldn't extract hindex")
+            return
+    else:
+        search_query = scholarly.search_author(f'{name}')
+        try:
+            first_author_result = next(search_query)
+        except StopIteration:
+            return
+
+def set_author_gscholar_info(id, gscholar_properties):
+    query = """
+    MATCH (a:Author {id: $id})
+    SET a += $newProperties
+    RETURN a
+    """    
+    with GraphDatabase.driver(URI, auth=("neo4j", "openreview")) as driver:
+        summary = driver.execute_query(query, id=id, newProperties=gscholar_properties, database="open-review-data").summary
+            
+    print("Created {nodes_created} nodes in {time} ms.".format(
+        nodes_created=summary.counters.nodes_created,
+        time=summary.result_available_after
+    ))
+
+def hydrate_gscholar_author_info():
+    pg = ProxyGenerator()
+    # success = pg.FreeProxies()
+    success = pg.ScraperAPI("b1bb916c1201f9bfc83672dfcc15e3d4")
+    if success:
+        scholarly.use_proxy(pg)
+    else:
+        print("No Proxy found.")
+    author_batch = get_author_batch()
+    while len(author_batch)>0:
+        for author in author_batch:
+            print(author)
+            info = find_author_info_gscholar(author["id"], author["name"])
+            if info is not None:
+                print(info)
+                set_author_gscholar_info(author["id"], info)
+            else:
+                print("author not found on gscholar")
+                set_author_gscholar_info(author["id"], {"scholar_id": "na"})
+        author_batch = get_author_batch()
+
+def get_conf_rankings(ranking_csv_file):
+    rank_lookup = {}
+    with open(ranking_csv_file, "r") as csv_fh:
+        core_csv = csv.reader(csv_fh)
+        for row in core_csv:
+            # rank_lookup[re.search(r"\d{4}", row[3]).group(0)][row[2]]=row[4]
+            rank_lookup[row[2]]=row[4]
+    return rank_lookup
+
+def get_confs():
+    with GraphDatabase.driver(URI, auth=("neo4j", "openreview")) as driver:
+        batch = run_cypher_match(
+        driver,
+        "open-review-data",
+        f"MATCH (c:Conference) RETURN c.id AS id, c.name AS name, c.year as year",
+    )
+    return batch
+
+def set_conf_rank(conf_id, rank, acr):
+    props = {"acronym":acr, "rank":rank}
+    query = """
+    MATCH (c:Conference {id: $id})
+    SET c += $newProperties
+    RETURN c
+    """    
+    with GraphDatabase.driver(URI, auth=("neo4j", "openreview")) as driver:
+        with driver.session(database="open-review-data") as session:
+            session.execute_write(lambda tx: tx.run(query, id=conf_id, newProperties=props))
+        
+def find_rank(lookup, acr):
+    try:
+        return lookup[acr]
+    except KeyError:
+        return "Unranked"
+
+def add_rank_to_conferences():
+    confs = get_confs()
+    conf_rank = get_conf_rankings("CORE.csv")
+    for conf in confs:
+        shortname = conf["name"].split(".")[0]
+        
+        if shortname=="eswc-conferences":
+            shortname = "ESWC"
+
+        elif shortname=="aclweb":
+            shortname = "ACL"
+
+        elif shortname=="sigmobile":
+            shortname = "Mobisys"
+
+        elif shortname=="humanrobotinteraction":
+            shortname = "HRI"
+
+        elif shortname=="ijcai":
+            shortname = "IJCAI"
+
+        elif shortname=="icaps-conference":
+            shortname = "ICAPS"
+        
+        elif shortname=="ECMLPKDD" or shortname=="ECMLPKDD".lower():
+            shortname = "ECML PKDD"
+        
+        elif shortname=="robot-learning":
+            shortname="CoRL"
+        
+        elif shortname=="cclear":
+            shortname="CLeaR"
+        
+        elif shortname=="thecvf":
+            shortname="ECCV"
+        
+        elif shortname=="graphicsinterface":
+            shortname="GI"
+        
+        elif shortname=="iscaconf":
+            shortname="ISCA"
+        
+        elif shortname=="auai":
+            shortname="UAI"
+        
+        elif shortname=="roboticsfoundation":
+            shortname="RSS"
+            
+        rank = find_rank(conf_rank, shortname)
+        set_conf_rank(conf["id"], rank, shortname)
+
+
 
 def hydrate_open_review_database():
     with open('confs_by_year.pickle', 'rb') as f:
@@ -247,19 +412,20 @@ def hydrate_open_review_database():
         make_paper_review_nodes_and_relations(confs_by_year, papers)
     paper_plus_reviews = [(r["subj"], r["obj"]) for r in insert_relations["relations"]["_HAS_REVIEW"]]
 
-    with GraphDatabase.driver(uri, auth=("neo4j", "openreview")) as driver:
+    with GraphDatabase.driver(URI, auth=("neo4j", "openreview")) as driver:
         for node_label in ["Conference", "Author", "Paper", "Review"]:
             set_constraint(driver, "open-review-data", node_label, "id")
             run_cypher_create(driver, "open-review-data", node_params[node_label], node_label)
         run_cypher_create(driver, "open-review-data", insert_relations, None)
 
     ## randomly assign authors to reviews and create the reviewer node and relation 
-    with GraphDatabase.driver(uri, auth=("neo4j", "openreview")) as driver:
+    with GraphDatabase.driver(URI, auth=("neo4j", "openreview")) as driver:
         reviewer_nodes, reviewer_relations = make_reviewer_relation(driver, "open-review-data", papers, paper_plus_reviews)
         set_constraint(driver, "open-review-data", "Reviewer", "id")
         run_cypher_create(driver, "open-review-data", reviewer_nodes, "Reviewer")
         run_cypher_create(driver, "open-review-data", reviewer_relations, None)
         run_setup_scripts(driver, "open-review-data", OR_DB_SETUP_SCRIPTS)
+        add_rank_to_conferences()
 
 def run_setup_scripts(driver, db_name, cypher_scripts):
     for script in cypher_scripts:
@@ -307,7 +473,7 @@ def hydrate_f1000_database():
     node_params["Paper"] = {"props":list(f1000_data["papers"].values())}
     node_params["Review"] = {"props":list(f1000_data["reviews"].values())}
     
-    with GraphDatabase.driver(uri, auth=("neo4j", "openreview")) as driver:
+    with GraphDatabase.driver(URI, auth=("neo4j", "openreview")) as driver:
         # set_constraint(driver, "f1000-data", "Author", "orcid")
         set_constraint(driver, "f1000-data", "Paper", "doc_id")
 
@@ -324,7 +490,7 @@ def delete_nodes(db_name, label=None):
         delete_query=f"MATCH (n:{label}) DELETE n"
     else:
         delete_query=f"MATCH (n) DELETE n"
-    driver = GraphDatabase.driver(uri, auth=("neo4j", "openreview"))
+    driver = GraphDatabase.driver(URI, auth=("neo4j", "openreview"))
     try:
         driver.execute_query(delete_query, database_=db_name)
     finally:
@@ -335,14 +501,14 @@ def delete_edges(db_name, label=None):
         delete_query=f"MATCH () -[r:{label}]-> () DELETE r"
     else:
         delete_query=f"MATCH () -[r]-> () DELETE r"
-    driver = GraphDatabase.driver(uri, auth=("neo4j", "openreview"))
+    driver = GraphDatabase.driver(URI, auth=("neo4j", "openreview"))
     try:
         driver.execute_query(delete_query, database_=db_name)
     finally:
         driver.close()    
     
 def delete_constraints(db_name, constraint_name=None):
-    with GraphDatabase.driver(uri, auth=("neo4j", "openreview")) as driver:
+    with GraphDatabase.driver(URI, auth=("neo4j", "openreview")) as driver:
         if constraint_name is not None:
             driver.execute_query(f"DROP CONSTRAINT {constraint_name}", database_=db_name)
         else:
@@ -351,7 +517,7 @@ def delete_constraints(db_name, constraint_name=None):
                 driver.execute_query(f"DROP CONSTRAINT {constraint['name']}", database_=db_name)
 
 def delete_indices(db_name, index_name=None):
-    with GraphDatabase.driver(uri, auth=("neo4j", "openreview")) as driver:
+    with GraphDatabase.driver(URI, auth=("neo4j", "openreview")) as driver:
         if index_name is not None:
             driver.execute_query(f"DROP INDEX {index_name}", database_=db_name)
         else:
@@ -368,8 +534,8 @@ def reset_db(db_name):
 def main():
     reset_db("open-review-data")
     hydrate_open_review_database()
-    # reset_db("f1000-data")
-    # hydrate_f1000_database()
+    reset_db("f1000-data")
+    hydrate_f1000_database()
 
 
 
