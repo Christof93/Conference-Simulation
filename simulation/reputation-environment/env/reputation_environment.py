@@ -34,12 +34,6 @@ class CustomActionMaskedEnvironment(ParallelEnv):
 
         These attributes should not be changed after initialization.
         """
-        self.escape_y = None
-        self.escape_x = None
-        self.guard_y = None
-        self.guard_x = None
-        self.prisoner_y = None
-        self.prisoner_x = None
         self.timestep = None
         self.n_authors = n_authors
         self.n_conferences = n_conferences
@@ -61,15 +55,6 @@ class CustomActionMaskedEnvironment(ParallelEnv):
         """
         self.agents = [self.possible_agents[0]] * self.n_authors + [self.possible_agents[1]] * self.n_conferences
         self.timestep = 0
-
-        self.prisoner_x = 0
-        self.prisoner_y = 0
-
-        self.guard_x = 7
-        self.guard_y = 7
-
-        self.escape_x = random.randint(2, 5)
-        self.escape_y = random.randint(2, 5)
 
         observation = (
             self.prisoner_x + 7 * self.prisoner_y,
