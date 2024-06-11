@@ -1,7 +1,7 @@
 .DS_Store
 __pycache__
 crawling_or_env/
-simulation_venv/
+.venv/
 openreview-py/
 openreview-clone/
 *.json
