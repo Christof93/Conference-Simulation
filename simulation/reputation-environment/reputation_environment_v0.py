@@ -1,3 +1,4 @@
+from time import sleep
 from env.reputation_environment import ReputationEnvironment
 
 env = ReputationEnvironment(render_mode="ansi")
@@ -8,6 +9,9 @@ while env.agents:
     actions = {agent: env.action_space(agent).sample(mask = env.action_masks[agent]) for agent in env.agents}
     observations, rewards, terminations, truncations, infos = env.step(actions)
     env.render()
-    breakpoint()
+    # breakpoint()
+    sleep(1)
+    if env.timestep>10:
+        break
 print(rewards)
 env.close()

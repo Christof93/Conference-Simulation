@@ -45,6 +45,7 @@ class ReputationEnvironment(ParallelEnv):
         self.action_masks = {}
         self.rewards = {}
         self.conferences = np.array((self.n_conferences,), dtype=np.int32)
+        self.paper_to_conference = np.array([-1 for _ in range(self.max_papers * self.n_authors)])
         self.reward_schemes = Enum('reward_scheme', ['CONVENTIONAL', 'TOKENS'])
         self.reward_scheme = self.reward_schemes[reward_scheme]
 
@@ -132,6 +133,7 @@ class ReputationEnvironment(ParallelEnv):
         assigned = observation["papers"]["authors"]["assigned"]
         wanted = observation["papers"]["authors"]["wanted"]
         ## papers which are finished can not be worked on or submitted again
+        ## the first action respresents choosing not to act.
         action_mask["contribute"][1:][finished] = 0
         action_mask["submit"]["id"][1:][finished] = 0
         ## papers which are assigned and not finished can be worked on
@@ -144,12 +146,13 @@ class ReputationEnvironment(ParallelEnv):
         observation = self.observations[agent]
         # make a new observation after applying the changes induced by action
 
-        ## check the submission action
+        ## submission action
         submitted_paper = action["submit"]["id"] - 1
         if submitted_paper >= 0:
             self.global_observation["papers"]["authors"]["finished"][submitted_paper] = True
+            self.paper_to_conference[submitted_paper] = action["submit"]["conference"]
         
-        ## check the new paper action
+        ## new paper action (number of coauthors to start a paper)
         if action["start_with_coauthors"] > 0:
             started = False
             author_papers = list(
@@ -159,6 +162,8 @@ class ReputationEnvironment(ParallelEnv):
                     self.global_observation["papers"]["authors"]["finished"]
                 )
             )
+
+            ## first loop: find other people to collaborate with
             for i, (assigned, wanted, _) in enumerate(author_papers):
                 ## other author(s) looking for same amount of coauthors
                 if assigned < wanted and wanted == action["start_with_coauthors"] and observation["papers"]["effort"][i]==0:
@@ -166,6 +171,8 @@ class ReputationEnvironment(ParallelEnv):
                     observation = self._work_on(observation, i)            
                     started = True
                     break
+
+            ## second loop: new entry in the paper list potentially open for collaborators
             if not started:
                 for i, (_, wanted, finished) in enumerate(author_papers):
                     ## start looking for coauthors for new paper
@@ -195,15 +202,31 @@ class ReputationEnvironment(ParallelEnv):
     def _reward_paper(self, effort, conference):
         if self.reward_scheme is self.reward_schemes.CONVENTIONAL:
             return self._conventional_reward(effort, conference)
-        
+
+    def _restock_conference_rewards(self, index = None):
+        if index is None:
+            self.conferences = np.abs(np.floor(np.random.normal(100, 25, self.n_conferences)))
+        else:
+            self.conferences[index] = np.abs(np.floor(np.random.normal(100, 25)))
+
     def _conventional_reward(self, effort, conference):
         ## how many papers were submitted? How are the tokens split?
-        potential_reward = self.conferences[conference]/10
+        potential_reward = self.conferences[conference] / 10
         ## accept?
         if sigmoid(effort - potential_reward) + np.random.normal(0, 0.05) > 0.5:
             return potential_reward
         else:
             return 0
+    
+    def _release_finished_paper_slots(self, actions):
+        finished = self.global_observation["papers"]["authors"]["finished"]
+        self.global_observation["papers"]["authors"]["assigned"][finished] = 0
+        self.global_observation["papers"]["authors"]["wanted"][finished] = 0
+        self.paper_to_conference[finished] = -1
+        self.global_observation["papers"]["total_effort"][finished] = 0
+        for agent in actions:
+            self.observations[agent]["papers"]["effort"][finished] = 0
+        self.global_observation["papers"]["authors"]["finished"][:] = False
         
     def render(self):
         """
@@ -218,7 +241,7 @@ class ReputationEnvironment(ParallelEnv):
 
         if len(self.agents) > 0:
             for agent in self.agents:
-                print(f"\n{agent}: ")
+                print(f"\n{agent} (latest reward: {self.rewards[agent]}): ")
                 print(self._format_action(self.actions[agent]))
                 print(self._format_observation(self.observations[agent]))
                 print(self._format_action_mask(self.action_masks[agent]))
@@ -247,8 +270,8 @@ class ReputationEnvironment(ParallelEnv):
         """
         self.agents = copy(self.possible_agents)
         self.timestep = 0
-        self.conferences = np.abs(np.floor(np.random.normal(100, 25, self.n_conferences)))
-        self.reputations = np.full((self.n_authors,),20, dtype=np.int32)
+        self.reputations = np.full((self.n_authors,), 20, dtype=np.int32)
+        self._restock_conference_rewards()
         observations = {}
         for agent in self.agents:
             self.observations[agent] = {
@@ -260,7 +283,7 @@ class ReputationEnvironment(ParallelEnv):
                     "authors": {
                         "assigned": np.zeros((self.max_papers * self.n_authors,), dtype=np.int8),
                         "wanted": np.zeros((self.max_papers * self.n_authors,), dtype=np.int8),
-                        "finished": np.zeros((self.max_papers * self.n_authors,), dtype=np.int8) > 0,
+                        "finished": np.zeros((self.max_papers * self.n_authors,), dtype=np.int8) > 0, # all False
                     }
                 }
             }
@@ -272,7 +295,7 @@ class ReputationEnvironment(ParallelEnv):
                 },
                 "contribute": np.concatenate((np.ones((1,), dtype=np.int8), np.zeros((self.n_authors * self.max_papers,), dtype=np.int8))) # contribute to paper
             }
-
+            self.rewards[agent] = 0
             observations[agent] = {
                 "observation": self.observations[agent], 
                 "action_mask": self.action_masks[agent],
@@ -290,8 +313,6 @@ class ReputationEnvironment(ParallelEnv):
         """Takes in actions for the current agents
 
         Needs to update:
-        - prisoner x and y coordinates
-        - guard x and y coordinates
         - terminations
         - truncations
         - rewards
@@ -301,27 +322,18 @@ class ReputationEnvironment(ParallelEnv):
         And any internal state used by observe() or render()
         """
         ## free up finished papers
-        finished = self.global_observation["papers"]["authors"]["finished"]
-        self.global_observation["papers"]["authors"]["assigned"][finished] = 0
-        self.global_observation["papers"]["authors"]["wanted"][finished ] = 0
-        self.global_observation["papers"]["total_effort"][finished] = 0
-        for agent in actions:
-            self.observations[agent]["papers"]["effort"][finished] = 0
-        self.global_observation["papers"]["authors"]["finished"][:] = False
-        # breakpoint()
+        self._release_finished_paper_slots(actions)
 
-        self.actions = actions
         # Execute actions
+        self.actions = actions
         observations = {}
         # Get dummy infos (not used in this example)
         infos = {}
         # Check termination conditions
         terminations = {a: False for a in self.agents}
+        # Check truncation conditions (overwrites termination conditions)
         truncations = {a: False for a in self.agents}
-        rewards = {}
         for agent, action in actions.items():
-            # Check truncation conditions (overwrites termination conditions)
-            
             # Get observations
             observation = self._observe_after_action(agent, action)
             # Generate action masks
@@ -331,18 +343,23 @@ class ReputationEnvironment(ParallelEnv):
                 "action_mask": self.action_masks[agent],
             }
             infos[agent] = {}
-            self.timestep += 1
+            
+        self.timestep += 1
 
         finished = self.global_observation["papers"]["authors"]["finished"]
+        assigned_to_finished = self.global_observation["papers"]["authors"]["assigned"][finished]
 
-        # for agent in self.agents:
-        #     effort = self.global_observation["papers"]["total_effort"][submitted_paper]
-
-        #     conference = self.conferences[submit_to]
-        #     reward = self._reward_paper(effort, conference)
-        
-        
-        
+        ## calculate rewards
+        rewards = {a: 0 for a in self.agents}
+        for agent in self.agents:
+            paper_efforts = self.observations[agent]["papers"]["effort"][finished]
+            ## collect rewards over all papers given to 
+            for paper_i, effort, n_coauthors in zip(np.nonzero(finished)[0], paper_efforts, assigned_to_finished):
+                conference = self.paper_to_conference[paper_i]
+                reward = self._reward_paper(effort, conference)
+                rewards[agent] += reward / (n_coauthors + 1)
+            self.rewards[agent] = rewards[agent]
+            self.reputations[self.agent_to_id[agent]] += rewards[agent]
         return observations, rewards, terminations, truncations, infos
 
     # Observation space should be defined here.
