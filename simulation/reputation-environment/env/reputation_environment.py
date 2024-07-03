@@ -20,7 +20,8 @@ class ReputationEnvironment(ParallelEnv):
         "name": "reputation_environment_v0",
     }
 
-    def __init__(self, n_authors=2, n_conferences=1, reward_scheme="CONVENTIONAL", render_mode=None):
+    def __init__(self, n_authors=2, n_conferences=1, max_concurrent_papers=5, reward_scheme="CONVENTIONAL", 
+                 max_coauthors = 20, max_submissions_per_conference=50, render_mode=None):
         """The init method defines the following attributes:
         - timestep
         - possible_agents
@@ -36,16 +37,20 @@ class ReputationEnvironment(ParallelEnv):
         self.n_authors = n_authors
         self.n_conferences = n_conferences
         self.possible_agents = []
-        self.agent_to_id = {}
-        self.max_papers = 5
-        self.max_authors = self.n_authors
+        self.max_concurrent_papers = max_concurrent_papers
+        self.max_coauthors = max_coauthors
+        self.max_submissions_per_conference = max_submissions_per_conference
         self.observations = {}
         self.global_observation = {}
         self.actions = {}
         self.action_masks = {}
         self.rewards = {}
         self.conferences = np.array((self.n_conferences,), dtype=np.int32)
-        self.paper_to_conference = np.array([-1 for _ in range(self.max_papers * self.n_authors)])
+        self.submission_counter = np.array((self.n_conferences,2), dtype=np.int64)
+        self.submissions = np.array((self.n_conferences, self.max_submissions_per_conference), dtype=np.int32)
+        self.paper_to_conference = np.array((self.max_concurrent_papers * self.n_authors,))
+        self.agent_to_id = {}
+        self.author_to_paper = {}
         self.reward_schemes = Enum('reward_scheme', ['CONVENTIONAL', 'TOKENS'])
         self.reward_scheme = self.reward_schemes[reward_scheme]
 
@@ -53,10 +58,11 @@ class ReputationEnvironment(ParallelEnv):
             agent = f"author_{i}"
             self.possible_agents.append(agent)
             self.agent_to_id[agent] = i
+            self.author_to_paper[agent] = np.array([False for _ in range(self.max_concurrent_papers * self.n_authors)])
     
     def _format_global_observation(self):
         observation = self.global_observation
-        spendable_observation = "\n - spendable tokens:\n  - {0}".format(
+        spendable_observation = "\n - conference reputation:\n  - {0}".format(
             '\n  - '.join([
                 f'conference_{i}: {s}' 
                 for i,s in enumerate(observation['spendable_tokens'])
@@ -72,6 +78,7 @@ class ReputationEnvironment(ParallelEnv):
                     observation['papers']['authors']['finished'],
                 )
             )
+            if wanted > 0
         ]
         assignments_observation = "\n - papers assigned, wanted, effort, finished:\n  - {0}".format('\n  - '.join(assignments))
 
@@ -95,7 +102,7 @@ class ReputationEnvironment(ParallelEnv):
         else:
             papers_observation = "\n  - no effort spent"
 
-        formatted_observation = f" - observations: {rep_observation}{papers_observation}"
+        formatted_observation = f" - observations: {rep_observation}{papers_observation}\n"
         return formatted_observation
 
     def _format_action(self, action):
@@ -116,15 +123,19 @@ class ReputationEnvironment(ParallelEnv):
         return formatted_action 
 
     def _format_action_mask(self, mask):
-        return mask
+        formatted_mask =  ' - action mask: ' 
+        formatted_mask += f'\n  - Is allowed to start papers: {np.all(mask["start_with_coauthors"]==1)}'
+        formatted_mask += f'\n  - can submit papers {", ". join([str(i)  for i in np.where(mask["submit"]["id"][1:]==1)[0] - 1])}'
+        formatted_mask += f'\n  - can contribute to papers {", ". join([str(i)  for i in np.where(mask["contribute"][1:]==1)[0] - 1])}'
+        return formatted_mask
     
     def _get_action_mask(self, agent, observation=None):
         action_mask = self.action_masks[agent]
         # construct new mask based on observed state of environment
 
-        effort = observation["papers"]["effort"]
+        paper_is_assigned = self.author_to_paper[agent]
         ## not more than max number of papers can be started.
-        if sum(effort > 0) >= self.max_papers:
+        if sum(paper_is_assigned) >= self.max_concurrent_papers:
             action_mask["start_with_coauthors"][:] = 0
         else:
             action_mask["start_with_coauthors"][:] = 1
@@ -137,9 +148,9 @@ class ReputationEnvironment(ParallelEnv):
         action_mask["contribute"][1:][finished] = 0
         action_mask["submit"]["id"][1:][finished] = 0
         ## papers which are assigned and not finished can be worked on
-        action_mask["contribute"][1:] = (effort > 0) & (~ finished)
+        action_mask["contribute"][1:] = (paper_is_assigned) & (~ finished)
         ## papers where all wanted are assigned can be submitted
-        action_mask["submit"]["id"][1:] = (effort > 0) & (assigned == wanted) & (~ finished)
+        action_mask["submit"]["id"][1:] = (paper_is_assigned) & (assigned == wanted) & (~ finished)
         return action_mask
     
     def _observe_after_action(self, agent, action=None):
@@ -151,6 +162,7 @@ class ReputationEnvironment(ParallelEnv):
         if submitted_paper >= 0:
             self.global_observation["papers"]["authors"]["finished"][submitted_paper] = True
             self.paper_to_conference[submitted_paper] = action["submit"]["conference"]
+            self.submission_counter[action["submit"]["conference"], 0] += 1
         
         ## new paper action (number of coauthors to start a paper)
         if action["start_with_coauthors"] > 0:
@@ -166,9 +178,9 @@ class ReputationEnvironment(ParallelEnv):
             ## first loop: find other people to collaborate with
             for i, (assigned, wanted, _) in enumerate(author_papers):
                 ## other author(s) looking for same amount of coauthors
-                if assigned < wanted and wanted == action["start_with_coauthors"] and observation["papers"]["effort"][i]==0:
+                if assigned < wanted and wanted == action["start_with_coauthors"] and not self.author_to_paper[agent][i]:
                     self.global_observation["papers"]["authors"]["assigned"][i] += 1
-                    observation = self._work_on(observation, i)            
+                    self.author_to_paper[agent][i] = True
                     started = True
                     break
 
@@ -179,7 +191,8 @@ class ReputationEnvironment(ParallelEnv):
                     if wanted == 0 and not finished:
                         self.global_observation["papers"]["authors"]["wanted"][i] = action["start_with_coauthors"]
                         self.global_observation["papers"]["authors"]["assigned"][i] = 1
-                        observation = self._work_on(observation, i)
+                        self.author_to_paper[agent][i] = True
+
                         started = True
                         break
         
@@ -199,21 +212,44 @@ class ReputationEnvironment(ParallelEnv):
         self.global_observation["papers"]["total_effort"][paper_number] += 1
         return observation
     
-    def _reward_paper(self, effort, conference):
-        if self.reward_scheme is self.reward_schemes.CONVENTIONAL:
-            return self._conventional_reward(effort, conference)
+    def _reward_agents(self):
+        finished = self.global_observation["papers"]["authors"]["finished"]
+        assigned_to_finished = self.global_observation["papers"]["authors"]["assigned"][finished]
+        rewards = {a: 0 for a in self.agents}
+        for agent in self.agents:
+            paper_efforts = self.observations[agent]["papers"]["effort"][finished]
+            ## collect rewards over all papers given to
+            for paper_i, effort, n_coauthors in zip(np.nonzero(finished)[0], paper_efforts, assigned_to_finished):
+                conference = self.paper_to_conference[paper_i]
+                if self.reward_scheme is self.reward_schemes.CONVENTIONAL:
+                    reward = self._conventional_reward(effort, conference)
+                else:
+                    reward = 0
+                if reward>0:
+                    self.submission_counter[conference, 1] += 1
+                    rewards[agent] += reward / (n_coauthors + 1)
+            self.rewards[agent] = rewards[agent]
+        return rewards
+ 
+    def _close_conference(self, conference_nr):
+        self.submission_counter[conference_nr, :] = 0
+        self._restock_conference_rewards(conference_nr)
 
     def _restock_conference_rewards(self, index = None):
         if index is None:
-            self.conferences = np.abs(np.floor(np.random.normal(100, 25, self.n_conferences)))
+            # self.conferences = np.abs(np.floor(np.random.normal(40, 15, self.n_conferences)))
+            self.conferences = np.random.choice([200, 400, 800], self.n_conferences)
         else:
-            self.conferences[index] = np.abs(np.floor(np.random.normal(100, 25)))
+            # self.conferences[index] = np.abs(np.floor(np.random.normal(100, 25)))
+            self.conferences[index] = np.random.choice([200, 400, 800])
 
-    def _conventional_reward(self, effort, conference):
+    def _conventional_reward(self, effort, conference, arbitrariness = 0.1):
         ## how many papers were submitted? How are the tokens split?
-        potential_reward = self.conferences[conference] / 10
+        acceptance_threshold = self.conferences[conference] / self.max_submissions_per_conference
+        potential_reward = acceptance_threshold
         ## accept?
-        if sigmoid(effort - potential_reward) + np.random.normal(0, 0.05) > 0.5:
+        paper_rating = sigmoid(effort, alpha=0.18, x_shift=acceptance_threshold) + np.random.normal(0, arbitrariness)
+        if paper_rating > 0.8:
             return potential_reward
         else:
             return 0
@@ -226,6 +262,7 @@ class ReputationEnvironment(ParallelEnv):
         self.global_observation["papers"]["total_effort"][finished] = 0
         for agent in actions:
             self.observations[agent]["papers"]["effort"][finished] = 0
+            self.author_to_paper[agent][finished] = False
         self.global_observation["papers"]["authors"]["finished"][:] = False
         
     def render(self):
@@ -238,16 +275,20 @@ class ReputationEnvironment(ParallelEnv):
                 "You are calling render method without specifying any render mode."
             )
             return
-
-        if len(self.agents) > 0:
+        elif self.render_mode == "all":
             for agent in self.agents:
                 print(f"\n{agent} (latest reward: {self.rewards[agent]}): ")
                 print(self._format_action(self.actions[agent]))
                 print(self._format_observation(self.observations[agent]))
                 print(self._format_action_mask(self.action_masks[agent]))
+            print(self._format_global_observation())
+        elif self.render_mode == "observation":
+            print(self._format_global_observation())
         else:
-            print("Game over")
-        print(self._format_global_observation())
+            gymnasium.logger.warn(
+                "Render mode not supported. No outputs will be rendered."
+            )
+            return
 
     def close(self):
         """
@@ -271,31 +312,34 @@ class ReputationEnvironment(ParallelEnv):
         self.agents = copy(self.possible_agents)
         self.timestep = 0
         self.reputations = np.full((self.n_authors,), 20, dtype=np.int32)
+        self.submission_counter = np.zeros((self.n_conferences,2), dtype=np.int64)
         self._restock_conference_rewards()
+        self.paper_to_conference = np.array([-1 for _ in range(self.max_concurrent_papers * self.n_authors)])
         observations = {}
         for agent in self.agents:
+            self.rewards[agent] = 0
+            self.author_to_paper[agent] = np.array([False for _ in range(self.max_concurrent_papers * self.n_authors)])
             self.observations[agent] = {
                 "spendable_tokens": self.conferences,
                 "agent_reputation": self.reputations[self.agent_to_id[agent]],
                 "papers": {
-                    "effort": np.zeros((self.max_papers * self.n_authors,), dtype=np.int32),
-                    "total_effort": np.zeros((self.max_papers * self.n_authors,), dtype=np.int32),
+                    "effort": np.zeros((self.max_concurrent_papers * self.n_authors,), dtype=np.int32),
+                    "total_effort": np.zeros((self.max_concurrent_papers * self.n_authors,), dtype=np.int32),
                     "authors": {
-                        "assigned": np.zeros((self.max_papers * self.n_authors,), dtype=np.int8),
-                        "wanted": np.zeros((self.max_papers * self.n_authors,), dtype=np.int8),
-                        "finished": np.zeros((self.max_papers * self.n_authors,), dtype=np.int8) > 0, # all False
+                        "assigned": np.zeros((self.max_concurrent_papers * self.n_authors,), dtype=np.int8),
+                        "wanted": np.zeros((self.max_concurrent_papers * self.n_authors,), dtype=np.int8),
+                        "finished": np.zeros((self.max_concurrent_papers * self.n_authors,), dtype=np.int8) > 0, # all False
                     }
                 }
             }
             self.action_masks[agent] = {
-                "start_with_coauthors": np.ones((self.max_authors + 1,), dtype=np.int8), # start a paper,
+                "start_with_coauthors": np.ones((self.max_coauthors + 1,), dtype=np.int8), # start a paper,
                 "submit": { # submit a paper, element 0 -> don't submit even if you could
-                    "id": np.concatenate((np.ones((1,), dtype=np.int8), np.zeros((self.n_authors * self.max_papers,), dtype=np.int8))),
+                    "id": np.concatenate((np.ones((1,), dtype=np.int8), np.zeros((self.n_authors * self.max_concurrent_papers,), dtype=np.int8))),
                     "conference": np.ones((self.n_conferences,), dtype=np.int8),
                 },
-                "contribute": np.concatenate((np.ones((1,), dtype=np.int8), np.zeros((self.n_authors * self.max_papers,), dtype=np.int8))) # contribute to paper
+                "contribute": np.concatenate((np.ones((1,), dtype=np.int8), np.zeros((self.n_authors * self.max_concurrent_papers,), dtype=np.int8))) # contribute to paper
             }
-            self.rewards[agent] = 0
             observations[agent] = {
                 "observation": self.observations[agent], 
                 "action_mask": self.action_masks[agent],
@@ -346,20 +390,16 @@ class ReputationEnvironment(ParallelEnv):
             
         self.timestep += 1
 
-        finished = self.global_observation["papers"]["authors"]["finished"]
-        assigned_to_finished = self.global_observation["papers"]["authors"]["assigned"][finished]
-
         ## calculate rewards
-        rewards = {a: 0 for a in self.agents}
+        rewards = self._reward_agents()
+        
         for agent in self.agents:
-            paper_efforts = self.observations[agent]["papers"]["effort"][finished]
-            ## collect rewards over all papers given to 
-            for paper_i, effort, n_coauthors in zip(np.nonzero(finished)[0], paper_efforts, assigned_to_finished):
-                conference = self.paper_to_conference[paper_i]
-                reward = self._reward_paper(effort, conference)
-                rewards[agent] += reward / (n_coauthors + 1)
-            self.rewards[agent] = rewards[agent]
             self.reputations[self.agent_to_id[agent]] += rewards[agent]
+        
+        ## close conference if enough papers were submitted
+        for i in np.nonzero(self.submission_counter[:,1] >= self.max_submissions_per_conference)[0]:
+            self._close_conference(i)
+        
         return observations, rewards, terminations, truncations, infos
 
     # Observation space should be defined here.
@@ -380,33 +420,33 @@ class ReputationEnvironment(ParallelEnv):
                 "effort": Box(
                     low=0,
                     high=12,
-                    shape=(self.n_authors * self.max_papers,),
+                    shape=(self.n_authors * self.max_concurrent_papers,),
                     dtype=np.int32
                 ),
                 "total_effort": Box(
                     low=0,
                     high=12,
-                    shape=(self.n_authors * self.max_papers,),
+                    shape=(self.n_authors * self.max_concurrent_papers,),
                     dtype=np.int32
                 ),
                 "authors": 
                     Dict({
                         "assigned": Box(
                             low=0, 
-                            high=self.max_authors, 
-                            shape=(self.max_papers * self.n_authors,), # assigned authors
+                            high=self.max_coauthors, 
+                            shape=(self.max_concurrent_papers * self.n_authors,), # assigned authors
                             dtype=np.int8
                         ),
                         "wanted": Box(
                             low=0, 
-                            high=self.max_authors, 
-                            shape=(self.max_papers * self.n_authors,), # wanted authors
+                            high=self.max_coauthors, 
+                            shape=(self.max_concurrent_papers * self.n_authors,), # wanted authors
                             dtype=np.int8
                         ),
                         "finished": Box(
                             low=0, 
-                            high=self.max_authors, 
-                            shape=(self.max_papers * self.n_authors,), # finished authors
+                            high=self.max_coauthors, 
+                            shape=(self.max_concurrent_papers * self.n_authors,), # finished authors
                             dtype=bool
                         ),
                     })
@@ -418,12 +458,12 @@ class ReputationEnvironment(ParallelEnv):
     @functools.lru_cache(maxsize=None)
     def action_space(self, agent):
         return Dict({
-            "start_with_coauthors": Discrete(self.max_authors + 1), # start a paper,
+            "start_with_coauthors": Discrete(self.max_coauthors + 1), # start a paper,
             "submit": Dict({ # submit a paper,
-                "id": Discrete(self.n_authors * self.max_papers + 1),
+                "id": Discrete(self.n_authors * self.max_concurrent_papers + 1),
                 "conference": Discrete(self.n_conferences),
             }),
-            "contribute": Discrete(self.n_authors * self.max_papers + 1) # contribute to paper
+            "contribute": Discrete(self.n_authors * self.max_concurrent_papers + 1) # contribute to paper
         })
     
 
