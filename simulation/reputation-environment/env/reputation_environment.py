@@ -156,7 +156,7 @@ class ReputationEnvironment(ParallelEnv):
     def _observe_after_action(self, agent, action=None):
         observation = self.observations[agent]
         # make a new observation after applying the changes induced by action
-
+        observation["author_reputation"] = self.reputations[self.agent_to_id[agent]]
         ## submission action
         submitted_paper = action["submit"]["id"] - 1
         if submitted_paper >= 0:
@@ -214,21 +214,26 @@ class ReputationEnvironment(ParallelEnv):
     
     def _reward_agents(self):
         finished = self.global_observation["papers"]["authors"]["finished"]
-        assigned_to_finished = self.global_observation["papers"]["authors"]["assigned"][finished]
         rewards = {a: 0 for a in self.agents}
+        if not np.any(finished):
+            return rewards
+        finished_effort = self.global_observation["papers"]["total_effort"][finished]
+        assigned_to_finished = self.global_observation["papers"]["authors"]["assigned"][finished]
+        paper_rewards = {}
+        for paper_i, effort, n_coauthors in zip(np.nonzero(finished)[0], finished_effort, assigned_to_finished):
+            conference = self.paper_to_conference[paper_i]            
+            if self.reward_scheme is self.reward_schemes.CONVENTIONAL:
+                reward = self._conventional_reward(effort, conference)
+            else:
+                reward = 0
+            paper_rewards[paper_i] = reward / (n_coauthors + 1)
+            if reward>0:
+                self.submission_counter[conference, 1] += 1
         for agent in self.agents:
-            paper_efforts = self.observations[agent]["papers"]["effort"][finished]
-            ## collect rewards over all papers given to
-            for paper_i, effort, n_coauthors in zip(np.nonzero(finished)[0], paper_efforts, assigned_to_finished):
-                conference = self.paper_to_conference[paper_i]
-                if self.reward_scheme is self.reward_schemes.CONVENTIONAL:
-                    reward = self._conventional_reward(effort, conference)
-                else:
-                    reward = 0
-                if reward>0:
-                    self.submission_counter[conference, 1] += 1
-                    rewards[agent] += reward / (n_coauthors + 1)
+            finished_agent_papers = np.nonzero(self.author_to_paper[agent] & finished)[0]
+            rewards[agent] = sum([paper_rewards[p] for p in finished_agent_papers])
             self.rewards[agent] = rewards[agent]
+            self.reputations[self.agent_to_id[agent]] += rewards[agent]
         return rewards
  
     def _close_conference(self, conference_nr):
@@ -249,7 +254,7 @@ class ReputationEnvironment(ParallelEnv):
         potential_reward = acceptance_threshold
         ## accept?
         paper_rating = sigmoid(effort, alpha=0.18, x_shift=acceptance_threshold) + np.random.normal(0, arbitrariness)
-        if paper_rating > 0.8:
+        if paper_rating > 0.5:
             return potential_reward
         else:
             return 0

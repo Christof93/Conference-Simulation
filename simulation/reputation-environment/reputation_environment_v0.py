@@ -3,9 +3,8 @@ from time import sleep
 import numpy as np
 from env.reputation_environment import ReputationEnvironment
 
-
 def simple_policy(agent, environment):
-    worthy_papers = environment.global_observation["papers"]["total_effort"] > 40
+    worthy_papers = environment.global_observation["papers"]["total_effort"] > 30
     new_mask = environment.action_masks[agent]
     new_mask["submit"]["id"][0] = (0 if np.any(worthy_papers) else 1)
     new_mask["submit"]["id"][1:] = worthy_papers.astype(np.int8)
@@ -26,8 +25,8 @@ if __name__=="__main__":
         observations, rewards, terminations, truncations, infos = env.step(actions)
         # breakpoint()
         # sleep(0.5)
-        if env.timestep>100:
+        if env.timestep>500:
             break
     env.render()
-    print(rewards)
+    print(env.reputations)
     env.close()
