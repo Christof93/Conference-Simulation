@@ -4,11 +4,25 @@ import numpy as np
 from env.reputation_environment import ReputationEnvironment
 
 def simple_policy(agent, environment):
-    worthy_papers = environment.global_observation["papers"]["total_effort"] > 30
     new_mask = environment.action_masks[agent]
-    new_mask["submit"]["id"][0] = (0 if np.any(worthy_papers) else 1)
+    submittable = new_mask["submit"]["id"][1:]
+    # only submit if total effort higher than 40
+    worthy_papers = (environment.global_observation["papers"]["total_effort"] > 40) & submittable
     new_mask["submit"]["id"][1:] = worthy_papers.astype(np.int8)
     new_mask["start_with_coauthors"][6:] = 0
+    # always contribute if possible
+    new_mask["contribute"][0] = 0
+    environment.action_masks[agent] = new_mask
+    return environment.action_space(agent).sample(mask=new_mask)
+
+def malicious_policy(agent, environment):
+    new_mask = environment.action_masks[agent]
+    submittable = new_mask["submit"]["id"][1:]
+    # submit if total effort higher than 20
+    worthy_papers = (environment.global_observation["papers"]["total_effort"] > 20) & submittable
+    new_mask["submit"]["id"][1:] = worthy_papers.astype(np.int8)
+    new_mask["start_with_coauthors"][12:] = 0
+    # always contribute if possible
     new_mask["contribute"][0] = 0
     environment.action_masks[agent] = new_mask
     return environment.action_space(agent).sample(mask=new_mask)
@@ -25,8 +39,9 @@ if __name__=="__main__":
         observations, rewards, terminations, truncations, infos = env.step(actions)
         # breakpoint()
         # sleep(0.5)
-        if env.timestep>500:
+        if env.timestep>10:
             break
     env.render()
     print(env.reputations)
+    print(env.network)
     env.close()

@@ -1,6 +1,7 @@
 import functools
 import gymnasium
 import numpy as np
+import shortuuid
 
 from enum import Enum
 from copy import copy
@@ -53,13 +54,30 @@ class ReputationEnvironment(ParallelEnv):
         self.author_to_paper = {}
         self.reward_schemes = Enum('reward_scheme', ['CONVENTIONAL', 'TOKENS'])
         self.reward_scheme = self.reward_schemes[reward_scheme]
-
+        self.agent_uuids = []
+        self.conference_uuids = []
+        self.conference_repetitions = np.array((self.n_conferences,), dtype=np.int32)
+        self.network_nodes = []
+        self.network_links = []
+        self.network = {"nodes":self.network_nodes}
+        
         for i in range(self.n_authors):
             agent = f"author_{i}"
             self.possible_agents.append(agent)
             self.agent_to_id[agent] = i
             self.author_to_paper[agent] = np.array([False for _ in range(self.max_concurrent_papers * self.n_authors)])
-    
+
+    def _add_network_node(self, name, type, **kwargs):
+        node = {"id": shortuuid.uuid() ,"name": name, "_type": [type], "date": self.timestep}
+        node.update(kwargs)
+        self.network_nodes.append(node)
+        return node["id"]
+
+    def _add_network_link(self, type, source, target, **kwargs):
+        link = {"source": source, "target": target ,"_type": [type]}
+        link.update(kwargs)
+        self.network_links.append(link)
+
     def _format_global_observation(self):
         observation = self.global_observation
         spendable_observation = "\n - conference reputation:\n  - {0}".format(
@@ -69,7 +87,9 @@ class ReputationEnvironment(ParallelEnv):
             ])
         )
         assignments = [
-            f'paper_{i}: {assigned}/{wanted} 🧑‍🎓 {effort} 💪 ({("✅" if finished else "⬜️")})' 
+            'paper_{:<5}-> {:>2}/{:<2} 🧑‍🎓 {:>3} 💪 ({})'.format(
+                i, assigned, wanted, effort, ("✅" if finished else "⬜️")
+            )
             for i, (assigned, wanted, effort, finished) in enumerate(
                 zip(
                     observation['papers']['authors']['assigned'],
@@ -163,6 +183,9 @@ class ReputationEnvironment(ParallelEnv):
             self.global_observation["papers"]["authors"]["finished"][submitted_paper] = True
             self.paper_to_conference[submitted_paper] = action["submit"]["conference"]
             self.submission_counter[action["submit"]["conference"], 0] += 1
+            new_paper_id = self._add_network_node()
+            self._add_network_link(new_paper_id, self.agent_uuids[self.agent_to_id[agent]], "_HAS_AUTHOR")
+            self._add_network_link(new_paper_id, self.conference_uuids[action["submit"]["conference"]], "_IS_SUBMITTED_TO")
         
         ## new paper action (number of coauthors to start a paper)
         if action["start_with_coauthors"] > 0:
@@ -244,11 +267,18 @@ class ReputationEnvironment(ParallelEnv):
         if index is None:
             # self.conferences = np.abs(np.floor(np.random.normal(40, 15, self.n_conferences)))
             self.conferences = np.random.choice([200, 400, 800], self.n_conferences)
+            self.conference_repetitions = np.zeros((self.n_conferences,), dtype=np.int32)
+            for i, rating in enumerate(self.conferences):
+                conference_id = self._add_network_node(f"conference_{i}_{self.conference_repetitions[i]}", "Conference", rank = rating)
+                self.conference_uuids.append(conference_id)
         else:
             # self.conferences[index] = np.abs(np.floor(np.random.normal(100, 25)))
             self.conferences[index] = np.random.choice([200, 400, 800])
+            self.conference_repetitions[index] += 1
+            conference_id = self._add_network_node(f"conference_{index}_{self.conference_repetitions[index]}", "Conference", rank = rating)
+            self.conference_uuids[i] = conference_id
 
-    def _conventional_reward(self, effort, conference, arbitrariness = 0.1):
+    def _conventional_reward(self, effort, conference, arbitrariness = 0.3):
         ## how many papers were submitted? How are the tokens split?
         acceptance_threshold = self.conferences[conference] / self.max_submissions_per_conference
         potential_reward = acceptance_threshold
@@ -349,7 +379,9 @@ class ReputationEnvironment(ParallelEnv):
                 "observation": self.observations[agent], 
                 "action_mask": self.action_masks[agent],
             }
-    
+            agent_id = self._add_network_node(agent, "Author")
+            self.agent_uuids.append(agent_id)
+
         self.global_observation = {
             "papers": self.observations[agent]["papers"],
             "spendable_tokens": self.observations[agent]["spendable_tokens"]
