@@ -21,8 +21,9 @@ class ReputationEnvironment(ParallelEnv):
         "name": "reputation_environment_v0",
     }
 
-    def __init__(self, n_authors=2, n_conferences=1, max_concurrent_papers=5, reward_scheme="CONVENTIONAL", 
-                 max_coauthors = 20, max_submissions_per_conference=50, render_mode=None):
+    def __init__(self, n_authors = 2, n_conferences = 1, max_concurrent_papers = 5,
+                 reward_scheme = "CONVENTIONAL", max_coauthors = 20, max_submissions_per_conference=50,
+                 render_mode = None):
         """The init method defines the following attributes:
         - timestep
         - possible_agents
@@ -37,6 +38,7 @@ class ReputationEnvironment(ParallelEnv):
         self.timestep = None
         self.n_authors = n_authors
         self.n_conferences = n_conferences
+        self.initial_reputation = 0
         self.possible_agents = []
         self.max_concurrent_papers = max_concurrent_papers
         self.max_coauthors = max_coauthors
@@ -48,7 +50,6 @@ class ReputationEnvironment(ParallelEnv):
         self.rewards = {}
         self.conferences = np.array((self.n_conferences,), dtype=np.int32)
         self.submission_counter = np.array((self.n_conferences,2), dtype=np.int64)
-        self.submissions = np.array((self.n_conferences, self.max_submissions_per_conference), dtype=np.int32)
         self.paper_to_conference = np.array((self.max_concurrent_papers * self.n_authors,))
         self.agent_to_id = {}
         self.author_to_paper = {}
@@ -60,6 +61,7 @@ class ReputationEnvironment(ParallelEnv):
         self.network_nodes = []
         self.network_links = []
         self.network = {"nodes":self.network_nodes}
+        self.on_step = lambda x:None
         
         for i in range(self.n_authors):
             agent = f"author_{i}"
@@ -68,7 +70,7 @@ class ReputationEnvironment(ParallelEnv):
             self.author_to_paper[agent] = np.array([False for _ in range(self.max_concurrent_papers * self.n_authors)])
 
     def _add_network_node(self, name, type, **kwargs):
-        node = {"id": shortuuid.uuid() ,"name": name, "_type": [type], "date": self.timestep}
+        node = {"id": shortuuid.uuid(), "name": name, "_type": [type], "date": self.timestep}
         node.update(kwargs)
         self.network_nodes.append(node)
         return node["id"]
@@ -101,8 +103,8 @@ class ReputationEnvironment(ParallelEnv):
             if wanted > 0
         ]
         assignments_observation = "\n - papers assigned, wanted, effort, finished:\n  - {0}".format('\n  - '.join(assignments))
-
-        formatted_observation = f"\nglobal state: {spendable_observation}{assignments_observation}"
+        
+        formatted_observation = f"\nglobal state: {spendable_observation}\n{assignments_observation}"
         return formatted_observation
 
     def _format_observation(self, observation):
@@ -183,7 +185,7 @@ class ReputationEnvironment(ParallelEnv):
             self.global_observation["papers"]["authors"]["finished"][submitted_paper] = True
             self.paper_to_conference[submitted_paper] = action["submit"]["conference"]
             self.submission_counter[action["submit"]["conference"], 0] += 1
-            new_paper_id = self._add_network_node()
+            new_paper_id = self._add_network_node(f"Paper_{submitted_paper}", "Paper")
             self._add_network_link(new_paper_id, self.agent_uuids[self.agent_to_id[agent]], "_HAS_AUTHOR")
             self._add_network_link(new_paper_id, self.conference_uuids[action["submit"]["conference"]], "_IS_SUBMITTED_TO")
         
@@ -215,7 +217,6 @@ class ReputationEnvironment(ParallelEnv):
                         self.global_observation["papers"]["authors"]["wanted"][i] = action["start_with_coauthors"]
                         self.global_observation["papers"]["authors"]["assigned"][i] = 1
                         self.author_to_paper[agent][i] = True
-
                         started = True
                         break
         
@@ -237,9 +238,9 @@ class ReputationEnvironment(ParallelEnv):
     
     def _reward_agents(self):
         finished = self.global_observation["papers"]["authors"]["finished"]
-        rewards = {a: 0 for a in self.agents}
+        self.rewards = {a: 0 for a in self.agents}
         if not np.any(finished):
-            return rewards
+            return self.rewards
         finished_effort = self.global_observation["papers"]["total_effort"][finished]
         assigned_to_finished = self.global_observation["papers"]["authors"]["assigned"][finished]
         paper_rewards = {}
@@ -254,10 +255,9 @@ class ReputationEnvironment(ParallelEnv):
                 self.submission_counter[conference, 1] += 1
         for agent in self.agents:
             finished_agent_papers = np.nonzero(self.author_to_paper[agent] & finished)[0]
-            rewards[agent] = sum([paper_rewards[p] for p in finished_agent_papers])
-            self.rewards[agent] = rewards[agent]
-            self.reputations[self.agent_to_id[agent]] += rewards[agent]
-        return rewards
+            self.rewards[agent] = sum([paper_rewards[p] for p in finished_agent_papers])
+            self.reputations[self.agent_to_id[agent]] += self.rewards[agent]
+        return self.rewards
  
     def _close_conference(self, conference_nr):
         self.submission_counter[conference_nr, :] = 0
@@ -317,8 +317,15 @@ class ReputationEnvironment(ParallelEnv):
                 print(self._format_observation(self.observations[agent]))
                 print(self._format_action_mask(self.action_masks[agent]))
             print(self._format_global_observation())
+            print()
         elif self.render_mode == "observation":
             print(self._format_global_observation())
+            reputations = "\n - agent reputation, submitted papers, effort:"
+            for i, rep in enumerate(self.reputations):
+                increase = rep - self.initial_reputation
+                reputations += f"\n  - {self.agents[i]}: {rep:>4} ({('+' if increase>=0 else '-')}{increase})"
+            print(reputations)
+            print()
         else:
             gymnasium.logger.warn(
                 "Render mode not supported. No outputs will be rendered."
@@ -346,7 +353,7 @@ class ReputationEnvironment(ParallelEnv):
         """
         self.agents = copy(self.possible_agents)
         self.timestep = 0
-        self.reputations = np.full((self.n_authors,), 20, dtype=np.int32)
+        self.reputations = np.full((self.n_authors,), self.initial_reputation, dtype=np.int32)
         self.submission_counter = np.zeros((self.n_conferences,2), dtype=np.int64)
         self._restock_conference_rewards()
         self.paper_to_conference = np.array([-1 for _ in range(self.max_concurrent_papers * self.n_authors)])
@@ -436,7 +443,7 @@ class ReputationEnvironment(ParallelEnv):
         ## close conference if enough papers were submitted
         for i in np.nonzero(self.submission_counter[:,1] >= self.max_submissions_per_conference)[0]:
             self._close_conference(i)
-        
+        self.on_step(self)
         return observations, rewards, terminations, truncations, infos
 
     # Observation space should be defined here.

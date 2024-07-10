@@ -1,7 +1,10 @@
 from time import sleep
+from enum import Enum
 
 import numpy as np
+
 from env.reputation_environment import ReputationEnvironment
+from env.evaluator import EnvironmentRecorder
 
 def simple_policy(agent, environment):
     new_mask = environment.action_masks[agent]
@@ -31,17 +34,33 @@ def random_policy(agent, environment):
     env.action_space(agent).sample(mask = environment.action_masks[agent])
 
 if __name__=="__main__":
-    env = ReputationEnvironment(n_authors=100, n_conferences=10, render_mode="observation")
+    env = ReputationEnvironment(n_authors=10, n_conferences=5, render_mode="observation")
+    recorder = EnvironmentRecorder(env)
     observations, infos = env.reset()
+    agent_to_strategy = {}
+    for agent in env.agents:
+        if np.random.random() > 0.5:
+            agent_to_strategy[agent] = "cooperative"
+        else:
+            agent_to_strategy[agent] = "malicious"
+    recorder.agent_to_strategy = agent_to_strategy
+
     while env.agents:
         # this is where you would insert your policy
-        actions = {agent: simple_policy(agent, env) for agent in env.agents}
+        actions = {}
+        for agent in env.agents:
+            if agent_to_strategy[agent] == "cooperative":
+                actions[agent] = simple_policy(agent, env)
+            elif agent_to_strategy[agent] == "malicious":
+                actions[agent] = malicious_policy(agent, env)
+            else:
+                actions[agent] = random_policy(agent, env)
         observations, rewards, terminations, truncations, infos = env.step(actions)
         # breakpoint()
         # sleep(0.5)
-        if env.timestep>10:
+        if env.timestep>1000:
             break
+    
+    recorder.report()
     env.render()
-    print(env.reputations)
-    print(env.network)
     env.close()
