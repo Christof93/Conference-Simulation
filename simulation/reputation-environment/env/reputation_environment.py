@@ -48,6 +48,7 @@ class ReputationEnvironment(ParallelEnv):
         self.initial_reputation = 0
         self.possible_agents = []
         self.max_concurrent_papers = max_concurrent_papers
+        self.n_possible_papers = self.max_concurrent_papers * self.n_authors
         self.max_coauthors = max_coauthors
         self.max_submissions_per_conference = max_submissions_per_conference
         self.observations = {}
@@ -58,7 +59,7 @@ class ReputationEnvironment(ParallelEnv):
         self.conferences = np.array((self.n_conferences,), dtype=np.int32)
         self.submission_counter = np.array((self.n_conferences, 2), dtype=np.int64)
         self.paper_to_conference = np.array(
-            (self.max_concurrent_papers * self.n_authors,)
+            (self.n_possible_papers,)
         )
         self.agent_to_id = {}
         self.author_to_paper = {}
@@ -66,10 +67,10 @@ class ReputationEnvironment(ParallelEnv):
         self.reward_scheme = self.reward_schemes[reward_scheme]
         self.agent_uuids = []
         self.conference_uuids = []
+        self.paper_uuids = [None for _ in range(self.n_possible_papers)]
         self.conference_repetitions = np.array((self.n_conferences,), dtype=np.int32)
-        self.network_nodes = []
+        self.network_nodes = {}
         self.network_links = []
-        self.network = {"nodes": self.network_nodes}
         self.on_step = lambda x: None
 
         for i in range(self.n_authors):
@@ -77,7 +78,7 @@ class ReputationEnvironment(ParallelEnv):
             self.possible_agents.append(agent)
             self.agent_to_id[agent] = i
             self.author_to_paper[agent] = np.array(
-                [False for _ in range(self.max_concurrent_papers * self.n_authors)]
+                [False for _ in range(self.n_possible_papers)]
             )
 
     def _add_network_node(self, name, type, **kwargs):
@@ -88,7 +89,7 @@ class ReputationEnvironment(ParallelEnv):
             "date": self.timestep,
         }
         node.update(kwargs)
-        self.network_nodes.append(node)
+        self.network_nodes[node["id"]] = node
         return node["id"]
 
     def _add_network_link(self, type, source, target, **kwargs):
@@ -219,15 +220,6 @@ class ReputationEnvironment(ParallelEnv):
             ] = True
             self.paper_to_conference[submitted_paper] = action["submit"]["conference"]
             self.submission_counter[action["submit"]["conference"], 0] += 1
-            new_paper_id = self._add_network_node(f"Paper_{submitted_paper}", "Paper")
-            self._add_network_link(
-                new_paper_id, self.agent_uuids[self.agent_to_id[agent]], "_HAS_AUTHOR"
-            )
-            self._add_network_link(
-                new_paper_id,
-                self.conference_uuids[action["submit"]["conference"]],
-                "_IS_SUBMITTED_TO",
-            )
 
         ## new paper action (number of coauthors to start a paper)
         if action["start_with_coauthors"] > 0:
@@ -298,20 +290,49 @@ class ReputationEnvironment(ParallelEnv):
             np.nonzero(finished)[0], finished_effort, assigned_to_finished
         ):
             conference = self.paper_to_conference[paper_i]
+            new_paper_id = self._add_network_node(
+                f"Paper_{paper_i}_{self.timestep}",
+                "Paper",
+                effort_distribution={},
+                effort=int(self.global_observation["papers"]["total_effort"][paper_i])
+            )
+            self.paper_uuids[paper_i] = new_paper_id
+            self._add_network_link(
+                new_paper_id,
+                self.conference_uuids[conference],
+                "_IS_SUBMITTED_TO",
+            )
             if self.reward_scheme is self.reward_schemes.CONVENTIONAL:
                 reward = self._conventional_reward(effort, conference)
             else:
                 reward = 0
+            self.network_nodes[self.paper_uuids[paper_i]]["reward"] = float(reward)
             paper_rewards[paper_i] = reward / (n_coauthors + 1)
             if reward > 0:
+                self.network_nodes[self.paper_uuids[paper_i]]["accepted"] = 1
                 self.submission_counter[conference, 1] += 1
+            else:
+                self.network_nodes[self.paper_uuids[paper_i]]["accepted"] = 0
+            n_submissions = self.submission_counter[conference, 0]
+            n_accepted = self.submission_counter[conference, 1]
+            self.network_nodes[self.conference_uuids[conference]]["n_submissions"] = int(n_submissions)
+            self.network_nodes[self.conference_uuids[conference]]["accepted"] = int(n_accepted)
         for agent in self.agents:
             finished_agent_papers = np.nonzero(self.author_to_paper[agent] & finished)[
                 0
             ]
-            self.rewards[agent] = sum([paper_rewards[p] for p in finished_agent_papers])
+            self.rewards[agent] = 0
+            for fp_i in finished_agent_papers:
+                author_effort = int(self.observations[agent]["papers"]["effort"][fp_i])
+                self.network_nodes[self.paper_uuids[fp_i]]["effort_distribution"][agent] = int(author_effort)
+                self._add_network_link(
+                    new_paper_id, self.agent_uuids[self.agent_to_id[agent]], "_HAS_AUTHOR"
+                )
+                self.rewards[agent] += paper_rewards[fp_i]
             self.reputations[self.agent_to_id[agent]] += self.rewards[agent]
+            self.network_nodes[self.agent_uuids[self.agent_to_id[agent]]]["reputation"] = int(self.reputations[self.agent_to_id[agent]])
         return self.rewards
+    
 
     def _close_conference(self, conference_nr):
         self.submission_counter[conference_nr, :] = 0
@@ -328,7 +349,9 @@ class ReputationEnvironment(ParallelEnv):
                 conference_id = self._add_network_node(
                     f"conference_{i}_{self.conference_repetitions[i]}",
                     "Conference",
-                    rank=rating,
+                    year=int(self.conference_repetitions[i]),
+                    rank=int(rating),
+                    index=i,
                 )
                 self.conference_uuids.append(conference_id)
         else:
@@ -338,9 +361,11 @@ class ReputationEnvironment(ParallelEnv):
             conference_id = self._add_network_node(
                 f"conference_{index}_{self.conference_repetitions[index]}",
                 "Conference",
-                rank=rating,
+                rank=int(self.conferences[index]),
+                year=int(self.conference_repetitions[index]),
+                index=index,
             )
-            self.conference_uuids[i] = conference_id
+            self.conference_uuids[index] = conference_id
 
     def _conventional_reward(self, effort, conference, arbitrariness=0.3):
         ## how many papers were submitted? How are the tokens split?
@@ -427,35 +452,35 @@ class ReputationEnvironment(ParallelEnv):
         self.submission_counter = np.zeros((self.n_conferences, 2), dtype=np.int64)
         self._restock_conference_rewards()
         self.paper_to_conference = np.array(
-            [-1 for _ in range(self.max_concurrent_papers * self.n_authors)]
+            [-1 for _ in range(self.n_possible_papers)]
         )
         observations = {}
         for agent in self.agents:
             self.rewards[agent] = 0
             self.author_to_paper[agent] = np.array(
-                [False for _ in range(self.max_concurrent_papers * self.n_authors)]
+                [False for _ in range(self.n_possible_papers)]
             )
             self.observations[agent] = {
                 "spendable_tokens": self.conferences,
                 "agent_reputation": self.reputations[self.agent_to_id[agent]],
                 "papers": {
                     "effort": np.zeros(
-                        (self.max_concurrent_papers * self.n_authors,), dtype=np.int32
+                        (self.n_possible_papers,), dtype=np.int32
                     ),
                     "total_effort": np.zeros(
-                        (self.max_concurrent_papers * self.n_authors,), dtype=np.int32
+                        (self.n_possible_papers,), dtype=np.int32
                     ),
                     "authors": {
                         "assigned": np.zeros(
-                            (self.max_concurrent_papers * self.n_authors,),
+                            (self.n_possible_papers,),
                             dtype=np.int8,
                         ),
                         "wanted": np.zeros(
-                            (self.max_concurrent_papers * self.n_authors,),
+                            (self.n_possible_papers,),
                             dtype=np.int8,
                         ),
                         "finished": np.zeros(
-                            (self.max_concurrent_papers * self.n_authors,),
+                            (self.n_possible_papers,),
                             dtype=np.int8,
                         )
                         > 0,  # all False
@@ -543,9 +568,6 @@ class ReputationEnvironment(ParallelEnv):
         ## calculate rewards
         rewards = self._reward_agents()
 
-        for agent in self.agents:
-            self.reputations[self.agent_to_id[agent]] += rewards[agent]
-
         ## close conference if enough papers were submitted
         for i in np.nonzero(
             self.submission_counter[:, 1] >= self.max_submissions_per_conference
@@ -586,7 +608,7 @@ class ReputationEnvironment(ParallelEnv):
                                     low=0,
                                     high=self.max_coauthors,
                                     shape=(
-                                        self.max_concurrent_papers * self.n_authors,
+                                        self.n_possible_papers,
                                     ),  # assigned authors
                                     dtype=np.int8,
                                 ),
@@ -594,7 +616,7 @@ class ReputationEnvironment(ParallelEnv):
                                     low=0,
                                     high=self.max_coauthors,
                                     shape=(
-                                        self.max_concurrent_papers * self.n_authors,
+                                        self.n_possible_papers,
                                     ),  # wanted authors
                                     dtype=np.int8,
                                 ),
@@ -602,7 +624,7 @@ class ReputationEnvironment(ParallelEnv):
                                     low=0,
                                     high=self.max_coauthors,
                                     shape=(
-                                        self.max_concurrent_papers * self.n_authors,
+                                        self.n_possible_papers,
                                     ),  # finished authors
                                     dtype=bool,
                                 ),

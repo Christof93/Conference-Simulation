@@ -4,7 +4,7 @@ from enum import Enum
 import numpy as np
 
 from env.reputation_environment import ReputationEnvironment
-from env.evaluator import EnvironmentRecorder
+from env.evaluator import EnvironmentRecorder, NetworkEvaluator
 
 def simple_policy(agent, environment):
     new_mask = environment.action_masks[agent]
@@ -39,8 +39,8 @@ if __name__=="__main__":
     observations, infos = env.reset()
     agent_to_strategy = {}
     for agent in env.agents:
-        if np.random.random() > 0.5:
-            agent_to_strategy[agent] = "cooperative"
+        if np.random.random() > 0.2:
+            agent_to_strategy[agent] = "honest"
         else:
             agent_to_strategy[agent] = "malicious"
     recorder.agent_to_strategy = agent_to_strategy
@@ -49,7 +49,7 @@ if __name__=="__main__":
         # this is where you would insert your policy
         actions = {}
         for agent in env.agents:
-            if agent_to_strategy[agent] == "cooperative":
+            if agent_to_strategy[agent] == "honest":
                 actions[agent] = simple_policy(agent, env)
             elif agent_to_strategy[agent] == "malicious":
                 actions[agent] = malicious_policy(agent, env)
@@ -62,5 +62,15 @@ if __name__=="__main__":
             break
     
     recorder.report()
-    env.render()
+    evaluator = NetworkEvaluator(
+        {
+            "nodes": list(env.network_nodes.values()), 
+            "links": env.network_links,
+            "steps": env.timestep,
+            "initial_reputation": env.initial_reputation,
+            "agent_strategy": agent_to_strategy
+        }
+    )
+    evaluator.report()
+    # env.render()
     env.close()

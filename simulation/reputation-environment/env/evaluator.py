@@ -3,7 +3,6 @@ from collections import Counter, defaultdict
 
 import numpy as np
 
-
 class EnvironmentRecorder:
     def __init__(self, environment):
         self.record_env = environment
@@ -11,6 +10,7 @@ class EnvironmentRecorder:
         self.record_env.on_step = lambda env: self.on_env_step(env)
         self.all_paper_count = {}
         self.nr_steps = 0
+        self.agent_to_strategy = {}
         self.author_efforts = {agent: [] for agent in self.record_env.possible_agents}
 
     def on_env_step(self, env):
@@ -60,7 +60,15 @@ class EnvironmentRecorder:
                 all_efforts += self.author_efforts[agent]
             return np.mean(all_efforts)
         return np.mean(self.author_efforts[agent])
-
+    
+    def get_median_effort(self, agent=None):
+        if agent is None:
+            all_efforts = []
+            for agent in self.actions_taken:
+                all_efforts += self.author_efforts[agent]
+            return np.median(all_efforts)
+        return np.median(self.author_efforts[agent])
+    
     def get_started_paper_count(self, agent=None):
         if agent is None:
             return sum(
@@ -119,7 +127,21 @@ class EnvironmentRecorder:
                 strat: count / all_strats for strat, count in count_strats.items()
             }
             return percentage_strats
-
+        
+    def get_papers_per_conference(self):
+        rates = {}
+        for node in self.record_env.network_nodes.values():
+            if node["_type"][0]=="Conference":
+                if "n_submissions" in node:
+                    rates[node["name"]] = (node["rank"], node["n_submissions"], node["accepted"])
+                else:
+                    rates[node["name"]] = (
+                        int(self.record_env.conferences[node["index"]]),
+                        int(self.record_env.submission_counter[node["index"], 0]),
+                        int(self.record_env.submission_counter[node["index"], 1]),
+                    )
+        return rates
+    
     def report(self):
         # print(self.record_env.network)
         print(
@@ -133,6 +155,103 @@ class EnvironmentRecorder:
             f"percentage of strategies used: {json.dumps(self.get_percentage_of_strategy(), indent=2)}"
         )
         print(
-            f"mean reputation increase {np.mean(self.record_env.reputations-self.record_env.initial_reputation)}"
+            f"mean reputation increase: {np.mean(self.record_env.reputations-self.record_env.initial_reputation)}"
         )
-        print(f"mean effort put into submitted papers {self.get_mean_effort()}")
+        print(f"mean effort put into submitted papers: {self.get_mean_effort()}")
+        print(f"median effort put into submitted papers: {self.get_median_effort()}")
+        print(f"conference submissions, publications and acceptance rates: ")
+        for conference, (rank, submitted, accepted)  in self.get_papers_per_conference().items():
+            print(f" - {conference} (reputation: {rank}): {accepted:>4}/{submitted:<4} ({accepted/submitted:.2f})")
+
+
+class NetworkEvaluator:
+    def __init__(self, network):
+        self.record_env = network
+        self.nr_steps = network["steps"]
+        self.papers = {}
+        self.authors = {}
+        self.conferences = {}
+        for node in self.record_env["nodes"]:
+            if node["_type"][0]=="Paper":
+                self.papers[node["id"]]=node
+            elif node["_type"][0]=="Author":
+                self.authors[node["id"]]=node
+            elif node["_type"][0]=="Conference":
+                self.conferences[node["id"]]=node
+        self.agent_to_strategy = network["agent_strategy"]
+
+    def get_mean_effort(self, agent=None):
+        if agent is None:
+            return np.mean([paper["effort"] for paper in self.papers.values()])
+        effort = []
+        for paper in self.papers.values():
+            if agent in paper["effort_distribution"]:
+                effort.append(paper["effort_distribution"][agent])
+        return np.mean(effort)
+    
+    def get_median_effort(self, agent=None):
+        if agent is None:
+            return np.median([paper["effort"] for paper in self.papers.values()])
+        effort = []
+        for paper in self.papers.values():
+            if agent in paper["effort_distribution"]:
+                effort.append(paper["effort_distribution"][agent])
+        return np.median(effort)
+
+    def get_submitted_paper_count(self, agent=None):
+        if agent is None:
+            return len(self.papers)
+        else:
+            return len([1 for p in self.papers.values() if agent in p["effort_distribution"]])
+
+    def get_accepted_paper_count(self, agent=None):
+        if agent is None:
+            return len([1 for p in self.papers.values() if p["accepted"]==1])
+        else:
+            return len([1 for p in self.papers.values() if agent in p["effort_distribution" and p["accepted"]==1]])
+
+    def get_avg_coauthors(self, agent=None):
+        if agent is None:
+            avg = np.mean([len(p["effort_distribution"]) for p in self.papers.values()])
+        else:
+            avg = np.mean([len(p["effort_distribution"]) for p in self.papers.values() if agent in p["effort_distribution"]])
+            
+        return avg
+
+    def get_percentage_of_strategy(self, strategy=None):
+        if strategy is None:
+            count_strats = Counter(self.agent_to_strategy.values())
+            all_strats = len(self.agent_to_strategy)
+            percentage_strats = {
+                strat: count / all_strats for strat, count in count_strats.items()
+            }
+            return percentage_strats
+        
+    def get_papers_per_conference(self):
+        rates = {}
+        for conf in self.conferences.values():
+            if "n_submissions" in conf:
+                rates[conf["name"]] = (conf["rank"], conf["n_submissions"], conf["accepted"])
+        return rates
+    
+    def report(self):
+        # print(json.dumps(self.record_env["nodes"], indent=2))
+        print(
+            f"simulation with {len(self.authors)} authors went on for {self.nr_steps} steps."
+        )
+        print(f"number of papers submitted: {self.get_submitted_paper_count()}")
+        print(f"number of papers accepted: {self.get_accepted_paper_count()}")
+        print(f"average number of coauthors per author: {self.get_avg_coauthors()}")
+        print(
+            f"percentage of strategies used: {json.dumps(self.get_percentage_of_strategy(), indent=2)}"
+        )
+        print(
+            f"mean reputation increase: {np.mean([a['reputation'] - self.record_env['initial_reputation'] for a in self.authors.values()])}"
+        )
+        print(f"mean effort put into submitted papers: {self.get_mean_effort()}")
+        print(f"median effort put into submitted papers: {self.get_median_effort()}")
+        print(f"conference submissions, publications and acceptance rates: ")
+        for conference, (rank, submitted, accepted)  in self.get_papers_per_conference().items():
+            print(f" - {conference} (reputation: {rank}): {accepted:>4}/{submitted:<4} ({accepted/submitted:.2f})")
+        # print(self.record_env.network_nodes)
+
