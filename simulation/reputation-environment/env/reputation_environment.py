@@ -1,15 +1,14 @@
 import functools
-import gymnasium
-import numpy as np
+import json
 import shortuuid
+import numpy as np
 
 from enum import Enum
 from copy import copy
 
-from gymnasium.spaces import Discrete, Box, Dict, MultiDiscrete
+import gymnasium
+from gymnasium.spaces import Discrete, Box, Dict
 from pettingzoo import ParallelEnv
-from pettingzoo.utils import agent_selector
-
 
 class ReputationEnvironment(ParallelEnv):
     """The metadata holds environment constants.
@@ -96,6 +95,32 @@ class ReputationEnvironment(ParallelEnv):
         link = {"source": source, "target": target, "_type": [type]}
         link.update(kwargs)
         self.network_links.append(link)
+
+    def _create_paper_connections(self, paper_i, conference, reward):
+        ## create paper node
+        new_paper_id = self._add_network_node(
+            f"Paper_{paper_i}_{self.timestep}",
+            "Paper",
+            effort_distribution={},
+            effort=int(self.global_observation["papers"]["total_effort"][paper_i]),
+            reward=float(reward),
+            accepted= (1 if reward>0 else 0),
+        )
+        self.paper_uuids[paper_i] = new_paper_id
+        
+        ## update conference node
+        n_submissions = self.submission_counter[conference, 0]
+        n_accepted = self.submission_counter[conference, 1]
+        self.network_nodes[self.conference_uuids[conference]]["n_submissions"] = int(n_submissions)
+        self.network_nodes[self.conference_uuids[conference]]["accepted"] = int(n_accepted)
+        
+        ## create link
+        self._add_network_link(
+            new_paper_id,
+            self.conference_uuids[conference],
+            "_IS_SUBMITTED_TO",
+        )
+        return new_paper_id
 
     def _format_global_observation(self):
         observation = self.global_observation
@@ -219,7 +244,6 @@ class ReputationEnvironment(ParallelEnv):
                 submitted_paper
             ] = True
             self.paper_to_conference[submitted_paper] = action["submit"]["conference"]
-            self.submission_counter[action["submit"]["conference"], 0] += 1
 
         ## new paper action (number of coauthors to start a paper)
         if action["start_with_coauthors"] > 0:
@@ -290,47 +314,42 @@ class ReputationEnvironment(ParallelEnv):
             np.nonzero(finished)[0], finished_effort, assigned_to_finished
         ):
             conference = self.paper_to_conference[paper_i]
-            new_paper_id = self._add_network_node(
-                f"Paper_{paper_i}_{self.timestep}",
-                "Paper",
-                effort_distribution={},
-                effort=int(self.global_observation["papers"]["total_effort"][paper_i])
-            )
-            self.paper_uuids[paper_i] = new_paper_id
-            self._add_network_link(
-                new_paper_id,
-                self.conference_uuids[conference],
-                "_IS_SUBMITTED_TO",
-            )
+            self.submission_counter[conference, 0] += 1
+
             if self.reward_scheme is self.reward_schemes.CONVENTIONAL:
                 reward = self._conventional_reward(effort, conference)
             else:
                 reward = 0
-            self.network_nodes[self.paper_uuids[paper_i]]["reward"] = float(reward)
+            
             paper_rewards[paper_i] = reward / (n_coauthors + 1)
+
             if reward > 0:
-                self.network_nodes[self.paper_uuids[paper_i]]["accepted"] = 1
                 self.submission_counter[conference, 1] += 1
-            else:
-                self.network_nodes[self.paper_uuids[paper_i]]["accepted"] = 0
-            n_submissions = self.submission_counter[conference, 0]
-            n_accepted = self.submission_counter[conference, 1]
-            self.network_nodes[self.conference_uuids[conference]]["n_submissions"] = int(n_submissions)
-            self.network_nodes[self.conference_uuids[conference]]["accepted"] = int(n_accepted)
+
+            if self.render_mode=="network":
+                new_paper_id = self._create_paper_connections(paper_i, conference, reward)
+
         for agent in self.agents:
             finished_agent_papers = np.nonzero(self.author_to_paper[agent] & finished)[
                 0
             ]
             self.rewards[agent] = 0
+            
             for fp_i in finished_agent_papers:
                 author_effort = int(self.observations[agent]["papers"]["effort"][fp_i])
-                self.network_nodes[self.paper_uuids[fp_i]]["effort_distribution"][agent] = int(author_effort)
-                self._add_network_link(
-                    new_paper_id, self.agent_uuids[self.agent_to_id[agent]], "_HAS_AUTHOR"
-                )
                 self.rewards[agent] += paper_rewards[fp_i]
+
+                if self.render_mode=="network":
+                    self.network_nodes[self.paper_uuids[fp_i]]["effort_distribution"][agent] = int(author_effort)
+                    self._add_network_link(
+                        new_paper_id, self.agent_uuids[self.agent_to_id[agent]], "_HAS_AUTHOR"
+                    )
+
             self.reputations[self.agent_to_id[agent]] += self.rewards[agent]
-            self.network_nodes[self.agent_uuids[self.agent_to_id[agent]]]["reputation"] = int(self.reputations[self.agent_to_id[agent]])
+            
+            if self.render_mode=="network":
+                self.network_nodes[self.agent_uuids[self.agent_to_id[agent]]]["reputation"] = int(self.reputations[self.agent_to_id[agent]])
+        
         return self.rewards
     
 
@@ -419,6 +438,8 @@ class ReputationEnvironment(ParallelEnv):
                 reputations += f"\n  - {self.agents[i]}: {rep:>4} ({('+' if increase>=0 else '-')}{increase})"
             print(reputations)
             print()
+        elif self.render_mode == "network":
+            print(json.dumps(self.network_nodes, indent=2))
         else:
             gymnasium.logger.warn(
                 "Render mode not supported. No outputs will be rendered."

@@ -34,7 +34,7 @@ def random_policy(agent, environment):
     env.action_space(agent).sample(mask = environment.action_masks[agent])
 
 if __name__=="__main__":
-    env = ReputationEnvironment(n_authors=10, n_conferences=5, render_mode="observation")
+    env = ReputationEnvironment(n_authors=10, n_conferences=5, render_mode="network")
     recorder = EnvironmentRecorder(env)
     observations, infos = env.reset()
     agent_to_strategy = {}
@@ -62,15 +62,16 @@ if __name__=="__main__":
             break
     
     recorder.report()
-    evaluator = NetworkEvaluator(
-        {
-            "nodes": list(env.network_nodes.values()), 
-            "links": env.network_links,
-            "steps": env.timestep,
-            "initial_reputation": env.initial_reputation,
-            "agent_strategy": agent_to_strategy
-        }
-    )
-    evaluator.report()
+    if env.render_mode=="network":
+        evaluator = NetworkEvaluator(
+            {
+                "nodes": list(env.network_nodes.values()), 
+                "links": env.network_links,
+                "steps": env.timestep,
+                "initial_reputation": env.initial_reputation,
+                "agent_strategy": agent_to_strategy
+            }
+        )
+        evaluator.report()
     # env.render()
     env.close()

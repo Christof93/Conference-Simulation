@@ -157,8 +157,8 @@ class EnvironmentRecorder:
         print(
             f"mean reputation increase: {np.mean(self.record_env.reputations-self.record_env.initial_reputation)}"
         )
-        print(f"mean effort put into submitted papers: {self.get_mean_effort()}")
-        print(f"median effort put into submitted papers: {self.get_median_effort()}")
+        print(f"mean effort put into papers: {self.get_mean_effort()}")
+        print(f"median effort put into papers: {self.get_median_effort()}")
         print(f"conference submissions, publications and acceptance rates: ")
         for conference, (rank, submitted, accepted)  in self.get_papers_per_conference().items():
             print(f" - {conference} (reputation: {rank}): {accepted:>4}/{submitted:<4} ({accepted/submitted:.2f})")
