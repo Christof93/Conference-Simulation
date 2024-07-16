@@ -3,6 +3,7 @@ from collections import Counter, defaultdict
 
 import numpy as np
 
+
 class EnvironmentRecorder:
     def __init__(self, environment):
         self.record_env = environment
@@ -60,7 +61,7 @@ class EnvironmentRecorder:
                 all_efforts += self.author_efforts[agent]
             return np.mean(all_efforts)
         return np.mean(self.author_efforts[agent])
-    
+
     def get_median_effort(self, agent=None):
         if agent is None:
             all_efforts = []
@@ -68,7 +69,7 @@ class EnvironmentRecorder:
                 all_efforts += self.author_efforts[agent]
             return np.median(all_efforts)
         return np.median(self.author_efforts[agent])
-    
+
     def get_started_paper_count(self, agent=None):
         if agent is None:
             return sum(
@@ -127,13 +128,17 @@ class EnvironmentRecorder:
                 strat: count / all_strats for strat, count in count_strats.items()
             }
             return percentage_strats
-        
+
     def get_papers_per_conference(self):
         rates = {}
         for node in self.record_env.network_nodes.values():
-            if node["_type"][0]=="Conference":
+            if node["_type"][0] == "Conference":
                 if "n_submissions" in node:
-                    rates[node["name"]] = (node["rank"], node["n_submissions"], node["accepted"])
+                    rates[node["name"]] = (
+                        node["rank"],
+                        node["n_submissions"],
+                        node["accepted"],
+                    )
                 else:
                     rates[node["name"]] = (
                         int(self.record_env.conferences[node["index"]]),
@@ -141,7 +146,7 @@ class EnvironmentRecorder:
                         int(self.record_env.submission_counter[node["index"], 1]),
                     )
         return rates
-    
+
     def report(self):
         # print(self.record_env.network)
         print(
@@ -160,8 +165,14 @@ class EnvironmentRecorder:
         print(f"mean effort put into papers: {self.get_mean_effort()}")
         print(f"median effort put into papers: {self.get_median_effort()}")
         print(f"conference submissions, publications and acceptance rates: ")
-        for conference, (rank, submitted, accepted)  in self.get_papers_per_conference().items():
-            print(f" - {conference} (reputation: {rank}): {accepted:>4}/{submitted:<4} ({accepted/submitted:.2f})")
+        for conference, (
+            rank,
+            submitted,
+            accepted,
+        ) in self.get_papers_per_conference().items():
+            print(
+                f" - {conference} (reputation: {rank}): {accepted:>4}/{submitted:<4} ({accepted/submitted:.2f})"
+            )
 
 
 class NetworkEvaluator:
@@ -172,12 +183,12 @@ class NetworkEvaluator:
         self.authors = {}
         self.conferences = {}
         for node in self.record_env["nodes"]:
-            if node["_type"][0]=="Paper":
-                self.papers[node["id"]]=node
-            elif node["_type"][0]=="Author":
-                self.authors[node["id"]]=node
-            elif node["_type"][0]=="Conference":
-                self.conferences[node["id"]]=node
+            if node["_type"][0] == "Paper":
+                self.papers[node["id"]] = node
+            elif node["_type"][0] == "Author":
+                self.authors[node["id"]] = node
+            elif node["_type"][0] == "Conference":
+                self.conferences[node["id"]] = node
         self.agent_to_strategy = network["agent_strategy"]
 
     def get_mean_effort(self, agent=None):
@@ -188,7 +199,7 @@ class NetworkEvaluator:
             if agent in paper["effort_distribution"]:
                 effort.append(paper["effort_distribution"][agent])
         return np.mean(effort)
-    
+
     def get_median_effort(self, agent=None):
         if agent is None:
             return np.median([paper["effort"] for paper in self.papers.values()])
@@ -202,20 +213,34 @@ class NetworkEvaluator:
         if agent is None:
             return len(self.papers)
         else:
-            return len([1 for p in self.papers.values() if agent in p["effort_distribution"]])
+            return len(
+                [1 for p in self.papers.values() if agent in p["effort_distribution"]]
+            )
 
     def get_accepted_paper_count(self, agent=None):
         if agent is None:
-            return len([1 for p in self.papers.values() if p["accepted"]==1])
+            return len([1 for p in self.papers.values() if p["accepted"] == 1])
         else:
-            return len([1 for p in self.papers.values() if agent in p["effort_distribution" and p["accepted"]==1]])
+            return len(
+                [
+                    1
+                    for p in self.papers.values()
+                    if agent in p["effort_distribution" and p["accepted"] == 1]
+                ]
+            )
 
     def get_avg_coauthors(self, agent=None):
         if agent is None:
             avg = np.mean([len(p["effort_distribution"]) for p in self.papers.values()])
         else:
-            avg = np.mean([len(p["effort_distribution"]) for p in self.papers.values() if agent in p["effort_distribution"]])
-            
+            avg = np.mean(
+                [
+                    len(p["effort_distribution"])
+                    for p in self.papers.values()
+                    if agent in p["effort_distribution"]
+                ]
+            )
+
         return avg
 
     def get_percentage_of_strategy(self, strategy=None):
@@ -226,14 +251,18 @@ class NetworkEvaluator:
                 strat: count / all_strats for strat, count in count_strats.items()
             }
             return percentage_strats
-        
+
     def get_papers_per_conference(self):
         rates = {}
         for conf in self.conferences.values():
             if "n_submissions" in conf:
-                rates[conf["name"]] = (conf["rank"], conf["n_submissions"], conf["accepted"])
+                rates[conf["name"]] = (
+                    conf["rank"],
+                    conf["n_submissions"],
+                    conf["accepted"],
+                )
         return rates
-    
+
     def report(self):
         # print(json.dumps(self.record_env["nodes"], indent=2))
         print(
@@ -251,7 +280,12 @@ class NetworkEvaluator:
         print(f"mean effort put into submitted papers: {self.get_mean_effort()}")
         print(f"median effort put into submitted papers: {self.get_median_effort()}")
         print(f"conference submissions, publications and acceptance rates: ")
-        for conference, (rank, submitted, accepted)  in self.get_papers_per_conference().items():
-            print(f" - {conference} (reputation: {rank}): {accepted:>4}/{submitted:<4} ({accepted/submitted:.2f})")
+        for conference, (
+            rank,
+            submitted,
+            accepted,
+        ) in self.get_papers_per_conference().items():
+            print(
+                f" - {conference} (reputation: {rank}): {accepted:>4}/{submitted:<4} ({accepted/submitted:.2f})"
+            )
         # print(self.record_env.network_nodes)
-
