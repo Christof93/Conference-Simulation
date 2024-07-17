@@ -19,6 +19,7 @@ class ReputationEnvironment(ParallelEnv):
 
     metadata = {
         "name": "reputation_environment_v0",
+        "render_modes": ["all", "observation", "network"],
     }
 
     def __init__(
@@ -30,6 +31,7 @@ class ReputationEnvironment(ParallelEnv):
         max_coauthors=20,
         max_submissions_per_conference=50,
         render_mode=None,
+        max_rewardless_steps=24,
     ):
         """The init method defines the following attributes:
         - timestep
@@ -70,6 +72,7 @@ class ReputationEnvironment(ParallelEnv):
         self.network_nodes = {}
         self.network_links = []
         self.on_step = lambda x: None
+        self.truncation_threshold = max_rewardless_steps
 
         for i in range(self.n_authors):
             agent = f"author_{i}"
@@ -135,6 +138,7 @@ class ReputationEnvironment(ParallelEnv):
                 ]
             )
         )
+
         assignments = [
             "paper_{:<5}-> {:>2}/{:<2} 🧑‍🎓 {:>3} 💪 ({})".format(
                 i, assigned, wanted, effort, ("✅" if finished else "⬜️")
@@ -149,6 +153,7 @@ class ReputationEnvironment(ParallelEnv):
             )
             if wanted > 0
         ]
+
         assignments_observation = (
             "\n - papers assigned, wanted, effort, finished:\n  - {0}".format(
                 "\n  - ".join(assignments)
@@ -158,6 +163,7 @@ class ReputationEnvironment(ParallelEnv):
         formatted_observation = (
             f"\nglobal state: {spendable_observation}\n{assignments_observation}"
         )
+
         return formatted_observation
 
     def _format_observation(self, observation):
@@ -188,19 +194,23 @@ class ReputationEnvironment(ParallelEnv):
         contribute_action = ""
         start_action = ""
         submit_action = ""
+
         if action["contribute"] > 0:
             contribute_action = f"\n  - contributes to paper_{action['contribute']-1}."
 
         if action["start_with_coauthors"] == 1:
             start_action = f"\n  - starting paper without coauthors."
+
         elif action["start_with_coauthors"] > 1:
             start_action = f"\n  - looking for paper with {action['start_with_coauthors'] - 1} coauthor(s)."
+
         if not action["submit"]["id"] == 0:
             submit_action = f"\n  - submitting paper_{action['submit']['id'] - 1} to conference_{action['submit']['conference']}."
 
         formatted_action = (
             f" - actions: {contribute_action}{start_action}{submit_action}\n"
         )
+
         return formatted_action
 
     def _format_action_mask(self, mask):
@@ -338,7 +348,6 @@ class ReputationEnvironment(ParallelEnv):
             finished_agent_papers = np.nonzero(self.author_to_paper[agent] & finished)[
                 0
             ]
-            self.rewards[agent] = 0
 
             for fp_i in finished_agent_papers:
                 author_effort = int(self.observations[agent]["papers"]["effort"][fp_i])
@@ -355,6 +364,8 @@ class ReputationEnvironment(ParallelEnv):
                     )
 
             self.reputations[self.agent_to_id[agent]] += self.rewards[agent]
+            if self.rewards[agent] > 0:
+                self.rewardless_steps[self.agent_to_id[agent]] = 0
 
             if self.render_mode == "network":
                 self.network_nodes[self.agent_uuids[self.agent_to_id[agent]]][
@@ -480,6 +491,7 @@ class ReputationEnvironment(ParallelEnv):
         self.reputations = np.full(
             (self.n_authors,), self.initial_reputation, dtype=np.int32
         )
+        self.rewardless_steps = np.zeros((self.n_authors,), dtype=np.int16)
         self.submission_counter = np.zeros((self.n_conferences, 2), dtype=np.int64)
         self._restock_conference_rewards()
         self.paper_to_conference = np.array([-1 for _ in range(self.n_possible_papers)])
@@ -542,7 +554,9 @@ class ReputationEnvironment(ParallelEnv):
                 "observation": self.observations[agent],
                 "action_mask": self.action_masks[agent],
             }
-            agent_id = self._add_network_node(agent, "Author")
+            agent_id = self._add_network_node(
+                agent, "Author", truncated=False, reputation=self.initial_reputation
+            )
             self.agent_uuids.append(agent_id)
 
         self.global_observation = {
@@ -576,7 +590,12 @@ class ReputationEnvironment(ParallelEnv):
         # Check termination conditions
         terminations = {a: False for a in self.agents}
         # Check truncation conditions (overwrites termination conditions)
-        truncations = {a: False for a in self.agents}
+        ## truncate if agent stayed rewardless after certain amount of time
+        truncations = {
+            a: self.rewardless_steps[self.agent_to_id[a]] >= self.truncation_threshold
+            for a in self.agents
+        }
+
         for agent, action in actions.items():
             # Get observations
             observation = self._observe_after_action(agent, action)
@@ -587,8 +606,10 @@ class ReputationEnvironment(ParallelEnv):
                 "action_mask": self.action_masks[agent],
             }
             infos[agent] = {}
-
-        self.timestep += 1
+            if self.render_mode == "network":
+                self.network_nodes[self.agent_uuids[self.agent_to_id[agent]]][
+                    "truncated"
+                ] = truncations[agent]
 
         ## calculate rewards
         rewards = self._reward_agents()
@@ -598,7 +619,11 @@ class ReputationEnvironment(ParallelEnv):
             self.submission_counter[:, 1] >= self.max_submissions_per_conference
         )[0]:
             self._close_conference(i)
+
         self.on_step(self)
+        self.agents = [a for a in truncations if not truncations[a]]
+        self.timestep += 1
+        self.rewardless_steps += 1
         return observations, rewards, terminations, truncations, infos
 
     # Observation space should be defined here.

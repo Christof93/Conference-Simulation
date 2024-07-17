@@ -1,6 +1,3 @@
-from time import sleep
-from enum import Enum
-
 import numpy as np
 
 from env.reputation_environment import ReputationEnvironment
@@ -34,7 +31,7 @@ def random_policy(agent, environment):
     env.action_space(agent).sample(mask = environment.action_masks[agent])
 
 if __name__=="__main__":
-    env = ReputationEnvironment(n_authors=10, n_conferences=5, render_mode="network")
+    env = ReputationEnvironment(n_authors=100, n_conferences=5, render_mode="network", max_rewardless_steps=100)
     recorder = EnvironmentRecorder(env)
     observations, infos = env.reset()
     agent_to_strategy = {}

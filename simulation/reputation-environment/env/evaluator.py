@@ -171,7 +171,13 @@ class EnvironmentRecorder:
             accepted,
         ) in self.get_papers_per_conference().items():
             print(
-                f" - {conference} (reputation: {rank}): {accepted:>4}/{submitted:<4} ({accepted/submitted:.2f})"
+                " - {} (reputation: {}): {:>4}/{:<4} ({})".format(
+                    conference,
+                    rank,
+                    accepted,
+                    submitted,
+                    (f"{accepted/submitted:.2f}" if submitted > 0 else "-"),
+                )
             )
 
 
