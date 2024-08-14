@@ -10,6 +10,9 @@ import gymnasium
 from gymnasium.spaces import Discrete, Box, Dict
 from pettingzoo import ParallelEnv
 
+### when do actors drop out of the process or new ones are introduced?
+## after a certain number of effort has been extended, they drop out
+## some drop out randomly
 
 class ReputationEnvironment(ParallelEnv):
     """The metadata holds environment constants.
@@ -32,6 +35,7 @@ class ReputationEnvironment(ParallelEnv):
         max_submissions_per_conference=50,
         render_mode=None,
         max_rewardless_steps=24,
+        max_steps=10,
     ):
         """The init method defines the following attributes:
         - timestep
@@ -46,6 +50,7 @@ class ReputationEnvironment(ParallelEnv):
         self.render_mode = render_mode
         self.timestep = None
         self.n_authors = n_authors
+        self.author_index = self.n_authors
         self.n_conferences = n_conferences
         self.initial_reputation = 0
         self.possible_agents = []
@@ -97,6 +102,15 @@ class ReputationEnvironment(ParallelEnv):
         link = {"source": source, "target": target, "_type": [type]}
         link.update(kwargs)
         self.network_links.append(link)
+
+    def _create_author_connections(self, author_i):
+        self.author_index+=1
+        author_name = "author_{self.author_index}"
+        self.agent_to_id[author_name]=author_i
+        agent_id = self._add_network_node(
+            author_name, "Author", truncated=False, reputation=self.initial_reputation
+        )
+        self.agent_uuids[author_i] = agent_id
 
     def _create_paper_connections(self, paper_i, conference, reward):
         ## create paper node
@@ -422,6 +436,13 @@ class ReputationEnvironment(ParallelEnv):
         else:
             return 0
 
+    def _release_truncated_actor_slots(self, truncations):
+        for author in truncations:
+            if truncations[author]:
+                self.author_to_paper[author] = np.array(
+                [False for _ in range(self.n_possible_papers)]
+            )
+
     def _release_finished_paper_slots(self, actions):
         finished = self.global_observation["papers"]["authors"]["finished"]
         self.global_observation["papers"]["authors"]["assigned"][finished] = 0
@@ -621,6 +642,7 @@ class ReputationEnvironment(ParallelEnv):
             self._close_conference(i)
 
         self.on_step(self)
+        self._release_truncated_actor_slots(truncations)
         self.agents = [a for a in truncations if not truncations[a]]
         self.timestep += 1
         self.rewardless_steps += 1
