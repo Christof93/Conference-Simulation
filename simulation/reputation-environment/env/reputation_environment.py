@@ -35,7 +35,7 @@ class ReputationEnvironment(ParallelEnv):
         max_submissions_per_conference=50,
         render_mode=None,
         max_rewardless_steps=24,
-        max_steps=10,
+        max_agent_steps=100,
     ):
         """The init method defines the following attributes:
         - timestep
@@ -50,6 +50,7 @@ class ReputationEnvironment(ParallelEnv):
         self.render_mode = render_mode
         self.timestep = None
         self.n_authors = n_authors
+        self.max_agent_steps = max_agent_steps
         self.author_index = self.n_authors
         self.n_conferences = n_conferences
         self.initial_reputation = 0
@@ -66,6 +67,7 @@ class ReputationEnvironment(ParallelEnv):
         self.conferences = np.array((self.n_conferences,), dtype=np.int32)
         self.submission_counter = np.array((self.n_conferences, 2), dtype=np.int64)
         self.paper_to_conference = np.array((self.n_possible_papers,))
+        self.agent_steps = np.array((self.n_authors,), dtype=np.int32)
         self.agent_to_id = {}
         self.author_to_paper = {}
         self.reward_schemes = Enum("reward_scheme", ["CONVENTIONAL", "TOKENS"])
@@ -439,9 +441,12 @@ class ReputationEnvironment(ParallelEnv):
     def _release_truncated_actor_slots(self, truncations):
         for author in truncations:
             if truncations[author]:
+                author_i = self.agent_to_id[author]
                 self.author_to_paper[author] = np.array(
-                [False for _ in range(self.n_possible_papers)]
-            )
+                    [False for _ in range(self.n_possible_papers)]
+                )
+                self.rewardless_steps[author_i] = 0
+                self.agent_steps[author_i] = 0
 
     def _release_finished_paper_slots(self, actions):
         finished = self.global_observation["papers"]["authors"]["finished"]
@@ -508,6 +513,7 @@ class ReputationEnvironment(ParallelEnv):
         And must set up the environment so that render(), step(), and observe() can be called without issues.
         """
         self.agents = copy(self.possible_agents)
+        self.agent_steps = np.zeros((self.n_authors,), dtype=np.int32)
         self.timestep = 0
         self.reputations = np.full(
             (self.n_authors,), self.initial_reputation, dtype=np.int32
@@ -516,6 +522,7 @@ class ReputationEnvironment(ParallelEnv):
         self.submission_counter = np.zeros((self.n_conferences, 2), dtype=np.int64)
         self._restock_conference_rewards()
         self.paper_to_conference = np.array([-1 for _ in range(self.n_possible_papers)])
+
         observations = {}
         for agent in self.agents:
             self.rewards[agent] = 0
@@ -613,7 +620,7 @@ class ReputationEnvironment(ParallelEnv):
         # Check truncation conditions (overwrites termination conditions)
         ## truncate if agent stayed rewardless after certain amount of time
         truncations = {
-            a: self.rewardless_steps[self.agent_to_id[a]] >= self.truncation_threshold
+            a: self.rewardless_steps[self.agent_to_id[a]] >= self.truncation_threshold or self.agent_steps[self.agent_to_id[a]] >= self.max_agent_steps
             for a in self.agents
         }
 
@@ -645,6 +652,7 @@ class ReputationEnvironment(ParallelEnv):
         self._release_truncated_actor_slots(truncations)
         self.agents = [a for a in truncations if not truncations[a]]
         self.timestep += 1
+        self.agent_steps += 1
         self.rewardless_steps += 1
         return observations, rewards, terminations, truncations, infos
 

@@ -31,7 +31,7 @@ def random_policy(agent, environment):
     env.action_space(agent).sample(mask = environment.action_masks[agent])
 
 if __name__=="__main__":
-    env = ReputationEnvironment(n_authors=100, n_conferences=5, render_mode="network", max_rewardless_steps=100)
+    env = ReputationEnvironment(n_authors=100, n_conferences=5, render_mode="network", max_rewardless_steps=150, max_agent_steps=5000)
     recorder = EnvironmentRecorder(env)
     observations, infos = env.reset()
     agent_to_strategy = {}
@@ -42,7 +42,7 @@ if __name__=="__main__":
             agent_to_strategy[agent] = "malicious"
     recorder.agent_to_strategy = agent_to_strategy
 
-    while env.agents:
+    while len(env.agents) > 0:
         # this is where you would insert your policy
         actions = {}
         for agent in env.agents:
@@ -55,7 +55,7 @@ if __name__=="__main__":
         observations, rewards, terminations, truncations, infos = env.step(actions)
         # breakpoint()
         # sleep(0.5)
-        if env.timestep>1000:
+        if env.timestep > 1000:
             break
     
     recorder.report()
@@ -66,7 +66,8 @@ if __name__=="__main__":
                 "links": env.network_links,
                 "steps": env.timestep,
                 "initial_reputation": env.initial_reputation,
-                "agent_strategy": agent_to_strategy
+                "agent_strategy": agent_to_strategy,
+                "remaining_agents": env.agents
             }
         )
         evaluator.report()

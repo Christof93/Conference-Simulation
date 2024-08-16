@@ -120,14 +120,20 @@ class EnvironmentRecorder:
             )
         return avg
 
-    def get_percentage_of_strategy(self, strategy=None):
+    def get_percentage_of_strategy(self, strategy=None, agents=None):
+        if agents is None:
+            strats = self.agent_to_strategy.values()
+        else:
+            strats = [self.agent_to_strategy[a] for a in self.agent_to_strategy if a in agents]
+        count_strats = Counter(strats)
+        all_strats = len(strats)
+        percentage_strats = {
+            strat: count / all_strats for strat, count in count_strats.items()
+        }
         if strategy is None:
-            count_strats = Counter(self.agent_to_strategy.values())
-            all_strats = len(self.agent_to_strategy)
-            percentage_strats = {
-                strat: count / all_strats for strat, count in count_strats.items()
-            }
             return percentage_strats
+        else:
+            return percentage_strats[strategy]
 
     def get_papers_per_conference(self):
         rates = {}
@@ -152,33 +158,34 @@ class EnvironmentRecorder:
         print(
             f"simulation with {self.record_env.n_authors} authors went on for {self.nr_steps} steps."
         )
-        print(f"number of papers started: {self.get_started_paper_count()}")
-        print(f"number of papers submitted: {self.get_submitted_paper_count()}")
-        print(f"number of papers accepted: {self.get_accepted_paper_count()}")
-        print(f"average number of coauthors per author: {self.get_avg_coauthors()}")
+        print(f"{len(self.record_env.agents)} agents remain.")
+        print(f"number of papers started (including unsubmitted papers): {self.get_started_paper_count()}")
+        # print(f"number of papers submitted: {self.get_submitted_paper_count()}")
+        # print(f"number of papers accepted: {self.get_accepted_paper_count()}")
+        print(f"average number of coauthors per author (including unsubmitted papers): {self.get_avg_coauthors():.2f}")
+        print(f"Agent strategies:")
+        print(f"  - before: {', '.join([f'{s}: {c}' for s,c in self.get_percentage_of_strategy().items()])}")
+        print(f"  - after: {', '.join([f'{s}: {c:.2f}' for s,c in self.get_percentage_of_strategy(agents=self.record_env.agents).items()])}")
         print(
-            f"percentage of strategies used: {json.dumps(self.get_percentage_of_strategy(), indent=2)}"
+            f"mean reputation increase: {np.mean(self.record_env.reputations-self.record_env.initial_reputation):.2f}"
         )
-        print(
-            f"mean reputation increase: {np.mean(self.record_env.reputations-self.record_env.initial_reputation)}"
-        )
-        print(f"mean effort put into papers: {self.get_mean_effort()}")
-        print(f"median effort put into papers: {self.get_median_effort()}")
-        print(f"conference submissions, publications and acceptance rates: ")
-        for conference, (
-            rank,
-            submitted,
-            accepted,
-        ) in self.get_papers_per_conference().items():
-            print(
-                " - {} (reputation: {}): {:>4}/{:<4} ({})".format(
-                    conference,
-                    rank,
-                    accepted,
-                    submitted,
-                    (f"{accepted/submitted:.2f}" if submitted > 0 else "-"),
-                )
-            )
+        print(f"mean effort put into papers (including unsubmitted papers): {self.get_mean_effort():.2f}")
+        print(f"median effort put into papers (including unsubmitted papers): {self.get_median_effort():.2f}")
+        # print(f"conference submissions, publications and acceptance rates: ")
+        # for conference, (
+        #     rank,
+        #     submitted,
+        #     accepted,
+        # ) in self.get_papers_per_conference().items():
+        #     print(
+        #         " - {} (reputation: {}): {:>4}/{:<4} ({})".format(
+        #             conference,
+        #             rank,
+        #             accepted,
+        #             submitted,
+        #             (f"{accepted/submitted:.2f}" if submitted > 0 else "-"),
+        #         )
+        #     )
 
 
 class NetworkEvaluator:
@@ -188,6 +195,7 @@ class NetworkEvaluator:
         self.papers = {}
         self.authors = {}
         self.conferences = {}
+        self.remaining_agents = network["remaining_agents"]
         for node in self.record_env["nodes"]:
             if node["_type"][0] == "Paper":
                 self.papers[node["id"]] = node
@@ -249,14 +257,20 @@ class NetworkEvaluator:
 
         return avg
 
-    def get_percentage_of_strategy(self, strategy=None):
+    def get_percentage_of_strategy(self, strategy=None, agents=None):
+        if agents is None:
+            strats = self.agent_to_strategy.values()
+        else:
+            strats = [self.agent_to_strategy[a] for a in self.agent_to_strategy if a in agents]
+        count_strats = Counter(strats)
+        all_strats = len(strats)
+        percentage_strats = {
+            strat: count / all_strats for strat, count in count_strats.items()
+        }
         if strategy is None:
-            count_strats = Counter(self.agent_to_strategy.values())
-            all_strats = len(self.agent_to_strategy)
-            percentage_strats = {
-                strat: count / all_strats for strat, count in count_strats.items()
-            }
             return percentage_strats
+        else:
+            return percentage_strats[strategy]
 
     def get_papers_per_conference(self):
         rates = {}
@@ -271,20 +285,22 @@ class NetworkEvaluator:
 
     def report(self):
         # print(json.dumps(self.record_env["nodes"], indent=2))
+        print(f"\nAnalysis from network file\n{'-'*20}")
         print(
             f"simulation with {len(self.authors)} authors went on for {self.nr_steps} steps."
         )
+        print(f"{len(self.remaining_agents)} agents remain.")
         print(f"number of papers submitted: {self.get_submitted_paper_count()}")
         print(f"number of papers accepted: {self.get_accepted_paper_count()}")
-        print(f"average number of coauthors per author: {self.get_avg_coauthors()}")
-        print(
-            f"percentage of strategies used: {json.dumps(self.get_percentage_of_strategy(), indent=2)}"
-        )
+        print(f"average number of coauthors per author: {self.get_avg_coauthors():.2f}")
+        print(f"Agent strategies:")
+        print(f"  - before: {', '.join([f'{s}: {c}' for s,c in self.get_percentage_of_strategy().items()])}")
+        print(f"  - after: {', '.join([f'{s}: {c:.2f}' for s,c in self.get_percentage_of_strategy(agents=self.remaining_agents).items()])}")
         print(
             f"mean reputation increase: {np.mean([a['reputation'] - self.record_env['initial_reputation'] for a in self.authors.values()])}"
         )
-        print(f"mean effort put into submitted papers: {self.get_mean_effort()}")
-        print(f"median effort put into submitted papers: {self.get_median_effort()}")
+        print(f"mean effort put into submitted papers: {self.get_mean_effort():.2f}")
+        print(f"median effort put into submitted papers: {self.get_median_effort():.2f}")
         print(f"conference submissions, publications and acceptance rates: ")
         for conference, (
             rank,
