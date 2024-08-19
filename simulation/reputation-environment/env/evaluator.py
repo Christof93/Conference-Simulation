@@ -160,8 +160,8 @@ class EnvironmentRecorder:
         )
         print(f"{len(self.record_env.agents)} agents remain.")
         print(f"number of papers started (including unsubmitted papers): {self.get_started_paper_count()}")
-        # print(f"number of papers submitted: {self.get_submitted_paper_count()}")
-        # print(f"number of papers accepted: {self.get_accepted_paper_count()}")
+        print(f"number of papers submitted: {self.get_submitted_paper_count()}")
+        print(f"number of papers accepted: {self.get_accepted_paper_count()}")
         print(f"average number of coauthors per author (including unsubmitted papers): {self.get_avg_coauthors():.2f}")
         print(f"Agent strategies:")
         print(f"  - before: {', '.join([f'{s}: {c}' for s,c in self.get_percentage_of_strategy().items()])}")
@@ -171,21 +171,21 @@ class EnvironmentRecorder:
         )
         print(f"mean effort put into papers (including unsubmitted papers): {self.get_mean_effort():.2f}")
         print(f"median effort put into papers (including unsubmitted papers): {self.get_median_effort():.2f}")
-        # print(f"conference submissions, publications and acceptance rates: ")
-        # for conference, (
-        #     rank,
-        #     submitted,
-        #     accepted,
-        # ) in self.get_papers_per_conference().items():
-        #     print(
-        #         " - {} (reputation: {}): {:>4}/{:<4} ({})".format(
-        #             conference,
-        #             rank,
-        #             accepted,
-        #             submitted,
-        #             (f"{accepted/submitted:.2f}" if submitted > 0 else "-"),
-        #         )
-        #     )
+        print(f"conference submissions, publications and acceptance rates: ")
+        for conference, (
+            rank,
+            submitted,
+            accepted,
+        ) in self.get_papers_per_conference().items():
+            print(
+                " - {} (reputation: {}): {:>4}/{:<4} ({})".format(
+                    conference,
+                    rank,
+                    accepted,
+                    submitted,
+                    (f"{accepted/submitted:.2f}" if submitted > 0 else "-"),
+                )
+            )
 
 
 class NetworkEvaluator:

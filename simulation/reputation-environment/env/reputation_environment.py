@@ -482,7 +482,7 @@ class ReputationEnvironment(ParallelEnv):
             reputations = "\n - agent reputation, submitted papers, effort:"
             for i, rep in enumerate(self.reputations):
                 increase = rep - self.initial_reputation
-                reputations += f"\n  - {self.agents[i]}: {rep:>4} ({('+' if increase>=0 else '-')}{increase})"
+                reputations += f"\n  - agent {i}: {rep:>4} ({('+' if increase>=0 else '-')}{increase})"
             print(reputations)
             print()
         elif self.render_mode == "network":
