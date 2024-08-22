@@ -70,6 +70,7 @@ class ReputationEnvironment(ParallelEnv):
         self.agent_steps = np.array((self.n_authors,), dtype=np.int32)
         self.agent_to_id = {}
         self.author_to_paper = {}
+        self.first_author_to_paper = {}
         self.reward_schemes = Enum("reward_scheme", ["CONVENTIONAL", "TOKENS"])
         self.reward_scheme = self.reward_schemes[reward_scheme]
         self.agent_uuids = []
@@ -86,6 +87,9 @@ class ReputationEnvironment(ParallelEnv):
             self.possible_agents.append(agent)
             self.agent_to_id[agent] = i
             self.author_to_paper[agent] = np.array(
+                [False for _ in range(self.n_possible_papers)]
+            )
+            self.first_author_to_paper[agent] = np.array(
                 [False for _ in range(self.n_possible_papers)]
             )
 
@@ -231,34 +235,48 @@ class ReputationEnvironment(ParallelEnv):
 
     def _format_action_mask(self, mask):
         formatted_mask = " - action mask: "
-        formatted_mask += f'\n  - Is allowed to start papers: {np.all(mask["start_with_coauthors"]==1)}'
-        formatted_mask += f'\n  - can submit papers {", ". join([str(i)  for i in np.where(mask["submit"]["id"][1:]==1)[0] - 1])}'
-        formatted_mask += f'\n  - can contribute to papers {", ". join([str(i)  for i in np.where(mask["contribute"][1:]==1)[0] - 1])}'
+        formatted_mask += f'\n  - Is allowed to start/collaborate on papers: {np.all(mask["start_with_coauthors"]==1)}'
+        formatted_mask += f'\n  - can collaborate on papers with n coauthors {", ". join([str(i+1)  for i in np.where(mask["collaborate"][1:]==1)[0]])}'
+        formatted_mask += f'\n  - can submit papers {", ". join([str(i)  for i in np.where(mask["submit"]["id"]==1)[0]])}'
+        formatted_mask += f'\n  - can contribute to papers {", ". join([str(i)  for i in np.where(mask["contribute"]==1)[0]])}'
         return formatted_mask
 
     def _get_action_mask(self, agent, observation=None):
         action_mask = self.action_masks[agent]
         # construct new mask based on observed state of environment
+        finished = observation["papers"]["authors"]["finished"]
+        assigned = observation["papers"]["authors"]["assigned"]
+        wanted = observation["papers"]["authors"]["wanted"]
 
         paper_is_assigned = self.author_to_paper[agent]
         ## not more than max number of papers can be started.
         if sum(paper_is_assigned) >= self.max_concurrent_papers:
             action_mask["start_with_coauthors"][:] = 0
+            action_mask["collaborate"][:] = 0
         else:
             action_mask["start_with_coauthors"][:] = 1
+            # collaborate only possible if there are open papers with
+            # certain number of collaborators.
+            open_positions = wanted - assigned
+            open_papers = np.array(
+                [
+                    np.any(open_positions[wanted==n]) 
+                    for n in range(len(action_mask["collaborate"]))
+                ],
+                dtype=np.int8
+            )
+            open_papers[0] = 1
+            action_mask["collaborate"] = open_papers
 
-        finished = observation["papers"]["authors"]["finished"]
-        assigned = observation["papers"]["authors"]["assigned"]
-        wanted = observation["papers"]["authors"]["wanted"]
         ## papers which are finished can not be worked on or submitted again
         ## the first action respresents choosing not to act.
-        action_mask["contribute"][1:][finished] = 0
-        action_mask["submit"]["id"][1:][finished] = 0
+
         ## papers which are assigned and not finished can be worked on
         action_mask["contribute"][1:] = (paper_is_assigned) & (~finished)
         ## papers where all wanted are assigned can be submitted
+        is_first_author = self.first_author_to_paper[agent]
         action_mask["submit"]["id"][1:] = (
-            (paper_is_assigned) & (assigned == wanted) & (~finished)
+            (is_first_author) & (assigned == wanted) & (~finished)
         )
         return action_mask
 
@@ -273,24 +291,23 @@ class ReputationEnvironment(ParallelEnv):
                 submitted_paper
             ] = True
             self.paper_to_conference[submitted_paper] = action["submit"]["conference"]
-
-        ## new paper action (number of coauthors to start a paper)
-        if action["start_with_coauthors"] > 0:
-            started = False
-            author_papers = list(
-                zip(
-                    self.global_observation["papers"]["authors"]["assigned"],
-                    self.global_observation["papers"]["authors"]["wanted"],
-                    self.global_observation["papers"]["authors"]["finished"],
-                )
+        author_papers = list(
+            zip(
+                self.global_observation["papers"]["authors"]["assigned"],
+                self.global_observation["papers"]["authors"]["wanted"],
+                self.global_observation["papers"]["authors"]["finished"],
             )
-
-            ## first loop: find other people to collaborate with
+        )
+        ## collaborate action (number of coauthors to collaborate with)
+        started = False
+        if action["collaborate"] > 0:
+            ## find other people to collaborate with
             for i, (assigned, wanted, _) in enumerate(author_papers):
                 ## other author(s) looking for same amount of coauthors
                 if (
                     assigned < wanted
-                    and wanted == action["start_with_coauthors"]
+                    and wanted == action["collaborate"]
+                    ## can not collaborate on paper where they already are authors
                     and not self.author_to_paper[agent][i]
                 ):
                     self.global_observation["papers"]["authors"]["assigned"][i] += 1
@@ -298,7 +315,9 @@ class ReputationEnvironment(ParallelEnv):
                     started = True
                     break
 
-            ## second loop: new entry in the paper list potentially open for collaborators
+        ## new paper action (number of coauthors to start a paper)
+        if action["start_with_coauthors"] > 0:
+            ##  new entry in the paper list potentially open for collaborators
             if not started:
                 for i, (_, wanted, finished) in enumerate(author_papers):
                     ## start looking for coauthors for new paper
@@ -308,6 +327,7 @@ class ReputationEnvironment(ParallelEnv):
                         )
                         self.global_observation["papers"]["authors"]["assigned"][i] = 1
                         self.author_to_paper[agent][i] = True
+                        self.first_author_to_paper[agent][i] = True
                         started = True
                         break
 
@@ -397,7 +417,7 @@ class ReputationEnvironment(ParallelEnv):
     def _restock_conference_rewards(self, index=None):
         if index is None:
             # self.conferences = np.abs(np.floor(np.random.normal(40, 15, self.n_conferences)))
-            self.conferences = np.random.choice([200, 400, 800], self.n_conferences)
+            self.conferences = np.random.choice([400, 450, 500], self.n_conferences)
             self.conference_repetitions = np.zeros(
                 (self.n_conferences,), dtype=np.int32
             )
@@ -412,7 +432,7 @@ class ReputationEnvironment(ParallelEnv):
                 self.conference_uuids.append(conference_id)
         else:
             # self.conferences[index] = np.abs(np.floor(np.random.normal(100, 25)))
-            self.conferences[index] = np.random.choice([200, 400, 800])
+            self.conferences[index] = np.random.choice([400, 450, 500])
             self.conference_repetitions[index] += 1
             conference_id = self._add_network_node(
                 f"conference_{index}_{self.conference_repetitions[index]}",
@@ -445,6 +465,9 @@ class ReputationEnvironment(ParallelEnv):
                 self.author_to_paper[author] = np.array(
                     [False for _ in range(self.n_possible_papers)]
                 )
+                self.first_author_to_paper[author] = np.array(
+                    [False for _ in range(self.n_possible_papers)]
+                )
                 self.rewardless_steps[author_i] = 0
                 self.agent_steps[author_i] = 0
 
@@ -457,6 +480,7 @@ class ReputationEnvironment(ParallelEnv):
         for agent in actions:
             self.observations[agent]["papers"]["effort"][finished] = 0
             self.author_to_paper[agent][finished] = False
+            self.first_author_to_paper[agent][finished] = False
         self.global_observation["papers"]["authors"]["finished"][:] = False
 
     def render(self):
@@ -529,6 +553,9 @@ class ReputationEnvironment(ParallelEnv):
             self.author_to_paper[agent] = np.array(
                 [False for _ in range(self.n_possible_papers)]
             )
+            self.first_author_to_paper[agent] = np.array(
+                [False for _ in range(self.n_possible_papers)]
+            )
             self.observations[agent] = {
                 "spendable_tokens": self.conferences,
                 "agent_reputation": self.reputations[self.agent_to_id[agent]],
@@ -554,6 +581,9 @@ class ReputationEnvironment(ParallelEnv):
             }
             self.action_masks[agent] = {
                 "start_with_coauthors": np.ones(
+                    (self.max_coauthors + 1,), dtype=np.int8
+                ),  # start a paper,
+                "collaborate": np.zeros(
                     (self.max_coauthors + 1,), dtype=np.int8
                 ),  # start a paper,
                 "submit": {  # submit a paper, element 0 -> don't submit even if you could
@@ -700,7 +730,7 @@ class ReputationEnvironment(ParallelEnv):
                                     low=0,
                                     high=self.max_coauthors,
                                     shape=(self.n_possible_papers,),  # finished authors
-                                    dtype=bool,
+                                    dtype=np.int8,
                                 ),
                             }
                         ),
@@ -717,7 +747,10 @@ class ReputationEnvironment(ParallelEnv):
             {
                 "start_with_coauthors": Discrete(
                     self.max_coauthors + 1
-                ),  # start a paper,
+                ),  # start a paper with n participants,
+                "collaborate":Discrete(
+                    self.max_coauthors + 1
+                ),  # colaborate paper with n participants,
                 "submit": Dict(
                     {  # submit a paper,
                         "id": Discrete(self.n_authors * self.max_concurrent_papers + 1),

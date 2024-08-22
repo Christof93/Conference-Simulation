@@ -3,7 +3,6 @@ from collections import Counter, defaultdict
 
 import numpy as np
 
-
 class EnvironmentRecorder:
     def __init__(self, environment):
         self.record_env = environment
