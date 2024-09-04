@@ -337,6 +337,7 @@ def find_rank(lookup, acr):
 def add_rank_to_conferences():
     confs = get_confs()
     conf_rank = get_conf_rankings("CORE.csv")
+    print("Adding conference ranks.")
     for conf in confs:
         shortname = conf["name"].split(".")[0]
         
@@ -387,10 +388,10 @@ def add_rank_to_conferences():
 
 
 
-def hydrate_open_review_database():
-    with open('confs_by_year.pickle', 'rb') as f:
+def hydrate_open_review_database(date=None):
+    with open(f'confs_by_year{(f"-{date}" if date else "")}.pickle', 'rb') as f:
         confs_by_year = pickle.load(f)
-    with open('papers.pickle', 'rb') as f:
+    with open(f'papers{(f"-{date}" if date else "")}.pickle', 'rb') as f:
         papers_by_conf = pickle.load(f)
     num_papers = 0
     papers = {}
@@ -533,9 +534,9 @@ def reset_db(db_name):
 
 def main():
     reset_db("open-review-data")
-    hydrate_open_review_database()
-    reset_db("f1000-data")
-    hydrate_f1000_database()
+    hydrate_open_review_database("03-09-2024")
+    # reset_db("f1000-data")
+    # hydrate_f1000_database()
 
 
 

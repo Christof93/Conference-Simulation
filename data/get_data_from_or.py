@@ -12,69 +12,75 @@ from datetime import datetime
 def get_client(api_version):
     print(api_version)
     # API V2
-    if api_version=="2":
+    if api_version == "2":
         return openreview.api.OpenReviewClient(
-            baseurl='https://api2.openreview.net',
-            username=os.getenv("OR_USERNAME"),
-            password=os.getenv("OR_PASSWORD"),
+            baseurl = 'https://api2.openreview.net',
+            username = os.getenv("OR_USERNAME"),
+            password = os.getenv("OR_PASSWORD"),
         )
 
     # API V1
-    if api_version=="1":
+    if api_version == "1":
         return openreview.Client(
-            baseurl='https://api.openreview.net',
-            username=os.getenv("OR_USERNAME"),
-            password=os.getenv("OR_PASSWORD"),
+            baseurl = 'https://api.openreview.net',
+            username = os.getenv("OR_USERNAME"),
+            password = os.getenv("OR_PASSWORD"),
         )
     else:
         print("Invalid API version!")
         return None
 
-def get_submissions(client, venue, mode, version):
-    if version == 1:
-        if mode =="single_blind":
-            all_subs = client.get_all_notes(invitation=f"{venue}/-/Submission", details="directReplies")
-        elif mode=="double_blind":
-            all_subs = client.get_all_notes(invitation=f"{venue}/-/Blind_Submission", details="directReplies")
-        else:
-            all_subs=[]
-            print("mode must be single_blind or double_blind")
-    elif version == 2:
-        all_subs=[]
+def get_submissions(client, venue, version):
+    all_subs = []
+    if version == "1":
+        all_subs = client.get_all_notes(invitation=f"{venue}/-/Submission", details="directReplies")
+        all_subs += client.get_all_notes(invitation=f"{venue}/-/Blind_Submission", details="directReplies")
+
+    elif version == "2":
+        try:
+            venue_group = client.get_group(venue)
+            if venue_group.content is not None:
+                submission_name = venue_group.content['submission_id']['value']
+                all_subs = client.get_all_notes(invitation=f'{submission_name}')
+
+        except openreview.OpenReviewException as e:
+            print(e)
+
     else:
         print("version must be 1 or 2.")
-        return []
+
     return all_subs
 
 def get_reviews(paper):
     replies = []
-    for reply in paper.details["directReplies"]:
-        if reply["invitation"].endswith("Official_Review"):
-            replies.append(reply)
+    if paper.details is not None:
+        for reply in paper.details["directReplies"]:
+            if reply["invitation"].endswith("Official_Review"):
+                replies.append(reply)
     return replies
 
 def main():
-    load_dotenv()
+    load_dotenv("credentials.env")
     version = str(os.getenv("OR_API_VERSION"))
     client = get_client(version)
     if client is None:
         exit(1)
     venues = client.get_group(id='venues').members
+    print(f"found {len(venues)} venues.")
     data = {}
     papers = defaultdict(dict)
     peer_reviews = defaultdict(dict)
-    for venue in venues:
-        sb_subs = get_submissions(client, venue, "single_blind", version)
-        db_subs = get_submissions(client, venue, "double_blind", version)
-        subs = sb_subs + db_subs
+    for i, venue in enumerate(venues):
+        print(i, venue)
+        subs = get_submissions(client, venue, version)
         for paper in subs:
             papers[venue][paper.id] = paper
             peer_reviews[venue][paper.id] = get_reviews(paper)
-    conf_by_year = enrich_peer_review_data(peer_reviews)
+    conf_by_year = enrich_peer_review_data(peer_reviews, papers)
     to_json_file(conf_by_year, "open_review_data")
-    save_to_disk("confs_by_year.pickle", conf_by_year)
-    save_to_disk("papers.pickle", papers)
-    save_to_disk("peer_reviews.pickle", peer_reviews)
+    save_to_disk(conf_by_year, "confs_by_year")
+    save_to_disk(papers, "papers", )
+    save_to_disk(peer_reviews, "peer_reviews")
  
 def to_json_file(data_dict, fn):
     with open(f"{fn}-{datetime.now().strftime('%d-%m-%Y')}.json", "w") as outfile:
