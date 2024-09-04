@@ -696,13 +696,13 @@ class ReputationEnvironment(ParallelEnv):
                     {
                         "effort": Box(
                             low=0,
-                            high=12,
+                            high=1200,
                             shape=(self.n_authors * self.max_concurrent_papers,),
                             dtype=np.int32,
                         ),
                         "total_effort": Box(
                             low=0,
-                            high=12,
+                            high=1200,
                             shape=(self.n_authors * self.max_concurrent_papers,),
                             dtype=np.int32,
                         ),
