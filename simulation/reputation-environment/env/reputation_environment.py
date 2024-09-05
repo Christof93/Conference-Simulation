@@ -9,10 +9,39 @@ from copy import copy
 import gymnasium
 from gymnasium.spaces import Discrete, Box, Dict
 from pettingzoo import ParallelEnv
+from pettingzoo.utils import parallel_to_aec, wrappers
+
 
 ### when do actors drop out of the process or new ones are introduced?
 ## after a certain number of effort has been extended, they drop out
 ## some drop out randomly
+
+def env(params, render_mode=None):
+    """
+    The env function often wraps the environment in wrappers by default.
+    You can find full documentation for these methods
+    elsewhere in the developer documentation.
+    """
+    internal_render_mode = render_mode if render_mode != "ansi" else "all"
+    env = raw_env(params, render_mode=internal_render_mode)
+    # This wrapper is only for environments which print results to the terminal
+    if render_mode == "ansi":
+        env = wrappers.CaptureStdoutWrapper(env)
+    # this wrapper helps error handling for discrete action spaces
+    env = wrappers.AssertOutOfBoundsWrapper(env)
+    # Provides a wide vareity of helpful user errors
+    # Strongly recommended
+    env = wrappers.OrderEnforcingWrapper(env)
+    return env
+
+def raw_env(params, render_mode=None):
+    """
+    To support the AEC API, the raw_env() function just uses the from_parallel
+    function to convert from a ParallelEnv to an AEC env
+    """
+    env = ReputationEnvironment(render_mode=render_mode, **params)
+    env = parallel_to_aec(env)
+    return env
 
 class ReputationEnvironment(ParallelEnv):
     """The metadata holds environment constants.
@@ -334,6 +363,7 @@ class ReputationEnvironment(ParallelEnv):
         ]
         observation["papers"]["authors"] = self.global_observation["papers"]["authors"]
         observation["venue_reputation"] = self.global_observation["venue_reputation"]
+        observation["agent_reputation"][0] = self.reputations[self.agent_to_id[agent]]
         self.observations[agent] = observation
         return observation
 
@@ -551,7 +581,7 @@ class ReputationEnvironment(ParallelEnv):
             )
             self.observations[agent] = {
                 "venue_reputation": self.conferences,
-                "agent_reputation": self.reputations[self.agent_to_id[agent]],
+                "agent_reputation": np.array([self.reputations[self.agent_to_id[agent]]]),
                 "papers": {
                     "effort": np.zeros((self.n_possible_papers,), dtype=np.int32),
                     "total_effort": np.zeros((self.n_possible_papers,), dtype=np.int32),
@@ -691,19 +721,19 @@ class ReputationEnvironment(ParallelEnv):
                 "venue_reputation": Box(
                     low=0, high=1_000_000, shape=(self.n_conferences,), dtype=np.int32
                 ),
-                "agent_reputation": Discrete(1000),  # Example max reputation tokens
+                "agent_reputation": Box(low=0, high=1_000, shape=(1,), dtype=np.int32),  # Example max reputation tokens
                 "papers": Dict(
                     {
                         "effort": Box(
                             low=0,
                             high=1200,
-                            shape=(self.n_authors * self.max_concurrent_papers,),
+                            shape=(self.n_possible_papers,),
                             dtype=np.int32,
                         ),
                         "total_effort": Box(
                             low=0,
                             high=1200,
-                            shape=(self.n_authors * self.max_concurrent_papers,),
+                            shape=(self.n_possible_papers,),
                             dtype=np.int32,
                         ),
                         "authors": Dict(

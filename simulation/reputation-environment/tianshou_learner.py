@@ -15,6 +15,7 @@ from copy import deepcopy
 from typing import Optional, Tuple
 
 import gymnasium
+from gymnasium.spaces.utils import flatten, flatdim
 import numpy as np
 import torch
 from tianshou.data import Collector, VectorReplayBuffer
@@ -26,7 +27,7 @@ from tianshou.utils import TensorboardLogger
 from tianshou.utils.net.common import Net
 from torch.utils.tensorboard import SummaryWriter
 
-from pettingzoo.classic import tictactoe_v3
+import env.reputation_environment as rep_env
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -98,61 +99,50 @@ def get_args() -> argparse.Namespace:
 
 def get_agents(
     args: argparse.Namespace = get_args(),
-    agent_learn: Optional[BasePolicy] = None,
-    agent_opponent: Optional[BasePolicy] = None,
+    agents: Optional[Tuple[BasePolicy]] = None,
     optim: Optional[torch.optim.Optimizer] = None,
 ) -> Tuple[BasePolicy, torch.optim.Optimizer, list]:
     env = get_env()
-    observation_space = (
-        env.observation_space["observation"]
-        if isinstance(env.observation_space, gymnasium.spaces.Dict)
-        else env.observation_space
-    )
-    args.state_shape = observation_space.shape or observation_space.n
-    args.action_shape = env.action_space.shape or env.action_space.n
-    if agent_learn is None:
-        # model
-        net = Net(
-            args.state_shape,
-            args.action_shape,
-            hidden_sizes=args.hidden_sizes,
-            device=args.device,
-        ).to(args.device)
-        if optim is None:
-            optim = torch.optim.Adam(net.parameters(), lr=args.lr)
-        agent_learn = DQNPolicy(
-            net,
-            optim,
-            args.gamma,
-            args.n_step,
-            target_update_freq=args.target_update_freq,
-        )
-        if args.resume_path:
-            agent_learn.load_state_dict(torch.load(args.resume_path))
+    # observation_space = (
+    #     env.observation_space["observation"]
+    #     if isinstance(env.observation_space, gymnasium.spaces.Dict)
+    #     else env.observation_space
+    # )
+    args.state_shape = flatdim(env.observation_space)
+    args.action_shape = flatdim(env.action_space)
+    if agents is None:
+        agent_policies = {}
+        for agent in env.possible_agents:
+            net = Net(
+                args.state_shape,
+                args.action_shape,
+                hidden_sizes=args.hidden_sizes,
+                device=args.device,
+            ).to(args.device)
+            if optim is None:
+                optim = torch.optim.Adam(net.parameters(), lr=args.lr)
+            agent_policies[agent] = DQNPolicy(
+                net,
+                optim,
+                args.gamma,
+                args.n_step,
+                target_update_freq=args.target_update_freq,
+            )
+            if args.resume_path:
+                agent_policies[agent].load_state_dict(torch.load(args.resume_path))
+        agents = list(agent_policies.values())
 
-    if agent_opponent is None:
-        if args.opponent_path:
-            agent_opponent = deepcopy(agent_learn)
-            agent_opponent.load_state_dict(torch.load(args.opponent_path))
-        else:
-            agent_opponent = RandomPolicy()
-
-    if args.agent_id == 1:
-        agents = [agent_learn, agent_opponent]
-    else:
-        agents = [agent_opponent, agent_learn]
     policy = MultiAgentPolicyManager(agents, env)
     return policy, optim, env.agents
 
 
 def get_env(render_mode=None):
-    return PettingZooEnv(tictactoe_v3.env(render_mode=render_mode))
+    return PettingZooEnv(rep_env.env({}, render_mode=render_mode))
 
 
 def train_agent(
     args: argparse.Namespace = get_args(),
-    agent_learn: Optional[BasePolicy] = None,
-    agent_opponent: Optional[BasePolicy] = None,
+    agents: Optional[Tuple[BasePolicy]] = None,
     optim: Optional[torch.optim.Optimizer] = None,
 ) -> Tuple[dict, BasePolicy]:
     # ======== environment setup =========
@@ -166,7 +156,7 @@ def train_agent(
 
     # ======== agent setup =========
     policy, optim, agents = get_agents(
-        args, agent_learn=agent_learn, agent_opponent=agent_opponent, optim=optim
+        args, agents, optim=optim
     )
 
     # ======== collector setup =========
@@ -181,7 +171,7 @@ def train_agent(
     train_collector.collect(n_step=args.batch_size * args.training_num)
 
     # ======== tensorboard logging setup =========
-    log_path = os.path.join(args.logdir, "tic_tac_toe", "dqn")
+    log_path = os.path.join(args.logdir, "academic_reputation", "dqn")
     writer = SummaryWriter(log_path)
     writer.add_text("args", str(args))
     logger = TensorboardLogger(writer)
@@ -192,7 +182,7 @@ def train_agent(
             model_save_path = args.model_save_path
         else:
             model_save_path = os.path.join(
-                args.logdir, "tic_tac_toe", "dqn", "policy.pth"
+                args.logdir, "academic_reputation", "dqn", "policy.pth"
             )
         torch.save(
             policy.policies[agents[args.agent_id - 1]].state_dict(), model_save_path
