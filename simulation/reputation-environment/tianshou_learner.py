@@ -112,7 +112,7 @@ def get_agents(
     args.action_shape = flatdim(env.action_space)
     if agents is None:
         agent_policies = {}
-        for agent in env.possible_agents:
+        for agent in env.agents:
             net = Net(
                 args.state_shape,
                 args.action_shape,
@@ -137,7 +137,10 @@ def get_agents(
 
 
 def get_env(render_mode=None):
-    return PettingZooEnv(rep_env.env({}, render_mode=render_mode))
+    env = PettingZooEnv(rep_env.env({}, render_mode=render_mode))
+    print(env)
+    breakpoint()
+    return env
 
 
 def train_agent(

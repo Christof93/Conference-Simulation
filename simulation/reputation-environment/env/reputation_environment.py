@@ -8,9 +8,9 @@ from copy import copy
 
 import gymnasium
 from gymnasium.spaces import Discrete, Box, Dict
+from gymnasium.spaces.utils import flatten
 from pettingzoo import ParallelEnv
 from pettingzoo.utils import parallel_to_aec, wrappers
-
 
 ### when do actors drop out of the process or new ones are introduced?
 ## after a certain number of effort has been extended, they drop out
@@ -112,7 +112,44 @@ class ReputationEnvironment(ParallelEnv):
         self.network_links = []
         self.on_step = lambda x: None
         self.truncation_threshold = max_rewardless_steps
-
+        self.action_mask_space = Dict(
+            {
+                "start_with_coauthors": Box(
+                    0,
+                    1,
+                    self.max_coauthors + 1,
+                    np.int8
+                ),  # start a paper with n participants,
+                "collaborate":Box(
+                    0,
+                    1,
+                    self.n_possible_papers + 1,
+                    np.int8
+                ),  # collaborate on paper
+                "submit": Dict(
+                    {  # submit a paper,
+                        "id": Box(
+                            0,
+                            1,
+                            self.n_possible_papers + 1,
+                            np.int8
+                        ),
+                        "conference": Box(
+                            0,
+                            1,
+                            self.n_conferences,
+                            np.int8
+                        )
+                    }
+                ),
+                "contribute": Box(
+                    0,
+                    1,
+                    self.n_possible_papers + 1,
+                    np.int8
+                )  # contribute to paper
+            }
+        )
         for i in range(self.n_authors):
             agent = f"author_{i}"
             self.possible_agents.append(agent)
@@ -607,7 +644,7 @@ class ReputationEnvironment(ParallelEnv):
                     (self.max_coauthors + 1,), dtype=np.int8
                 ),  # start a paper,
                 "collaborate": np.zeros(
-                    (self.n_authors * self.max_concurrent_papers + 1,),
+                    (self.n_possible_papers + 1,),
                     dtype=np.int8
                 ),  # start a paper,
                 "submit": {  # submit a paper, element 0 -> don't submit even if you could
@@ -615,7 +652,7 @@ class ReputationEnvironment(ParallelEnv):
                         (
                             np.ones((1,), dtype=np.int8),
                             np.zeros(
-                                (self.n_authors * self.max_concurrent_papers,),
+                                (self.n_possible_papers,),
                                 dtype=np.int8,
                             ),
                         )
@@ -626,15 +663,15 @@ class ReputationEnvironment(ParallelEnv):
                     (
                         np.ones((1,), dtype=np.int8),
                         np.zeros(
-                            (self.n_authors * self.max_concurrent_papers,),
+                            (self.n_possible_papers,),
                             dtype=np.int8,
                         ),
                     )
                 ),  # contribute to paper
             }
             observations[agent] = {
-                "observation": self.observations[agent],
-                "action_mask": self.action_masks[agent],
+                "observation": flatten(self.observation_space(agent), self.observations[agent]),
+                "action_mask": flatten(self.action_mask_space, self.action_masks[agent]),
             }
             agent_id = self._add_network_node(
                 agent, "Author", truncated=False, reputation=self.initial_reputation
@@ -684,8 +721,8 @@ class ReputationEnvironment(ParallelEnv):
             # Generate action masks
             self.action_masks[agent] = self._get_action_mask(agent, observation)
             observations[agent] = {
-                "observation": observation,
-                "action_mask": self.action_masks[agent],
+                "observation": flatten(self.observation_space(agent), observation),
+                "action_mask": flatten(self.action_mask_space, self.action_masks[agent]),
             }
             infos[agent] = {}
             if self.render_mode == "network":
@@ -773,16 +810,16 @@ class ReputationEnvironment(ParallelEnv):
                     self.max_coauthors + 1
                 ),  # start a paper with n participants,
                 "collaborate":Discrete(
-                    self.n_authors * self.max_concurrent_papers + 1
+                    self.n_possible_papers + 1
                 ),  # collaborate on paper
                 "submit": Dict(
                     {  # submit a paper,
-                        "id": Discrete(self.n_authors * self.max_concurrent_papers + 1),
+                        "id": Discrete(self.n_possible_papers + 1),
                         "conference": Discrete(self.n_conferences),
                     }
                 ),
                 "contribute": Discrete(
-                    self.n_authors * self.max_concurrent_papers + 1
+                    self.n_possible_papers + 1
                 ),  # contribute to paper
             }
         )
@@ -790,3 +827,4 @@ class ReputationEnvironment(ParallelEnv):
 
 def sigmoid(x, alpha=1, x_shift=10):
     return 1 / (1 + np.exp(-alpha * x + x_shift))
+
