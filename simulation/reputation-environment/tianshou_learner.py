@@ -12,13 +12,13 @@ git+https://github.com/thu-ml/tianshou
 import argparse
 import os
 from copy import deepcopy
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import gymnasium
-from gymnasium.spaces.utils import flatten, flatdim
+from gymnasium.spaces.utils import flatten_space, flatdim, unflatten
 import numpy as np
 import torch
-from tianshou.data import Collector, VectorReplayBuffer
+from tianshou.data import Collector, VectorReplayBuffer, Batch
 from tianshou.env import DummyVectorEnv
 from tianshou.env.pettingzoo_env import PettingZooEnv
 from tianshou.policy import BasePolicy, DQNPolicy, MultiAgentPolicyManager, RandomPolicy
@@ -102,14 +102,15 @@ def get_agents(
     agents: Optional[Tuple[BasePolicy]] = None,
     optim: Optional[torch.optim.Optimizer] = None,
 ) -> Tuple[BasePolicy, torch.optim.Optimizer, list]:
+    BasePolicy.map_action = map_action2
     env = get_env()
     # observation_space = (
     #     env.observation_space["observation"]
     #     if isinstance(env.observation_space, gymnasium.spaces.Dict)
     #     else env.observation_space
     # )
-    args.state_shape = flatdim(env.observation_space)
-    args.action_shape = flatdim(env.action_space)
+    args.state_shape = (flatdim(env.observation_space),)
+    args.action_shape = (flatdim(env.action_space),)
     if agents is None:
         agent_policies = {}
         for agent in env.agents:
@@ -138,10 +139,44 @@ def get_agents(
 
 def get_env(render_mode=None):
     env = PettingZooEnv(rep_env.env({}, render_mode=render_mode))
-    print(env)
-    breakpoint()
     return env
 
+def map_action2(self, act: Union[Batch, np.ndarray]) -> Union[Batch, np.ndarray]:
+    """Map raw network output to action range in gym's env.action_space.
+
+    This function is called in :meth:`~tianshou.data.Collector.collect` and only
+    affects action sending to env. Remapped action will not be stored in buffer
+    and thus can be viewed as a part of env (a black box action transformation).
+
+    Action mapping includes 2 standard procedures: bounding and scaling. Bounding
+    procedure expects original action range is (-inf, inf) and maps it to [-1, 1],
+    while scaling procedure expects original action range is (-1, 1) and maps it
+    to [action_space.low, action_space.high]. Bounding procedure is applied first.
+
+    :param act: a data batch or numpy.ndarray which is the action taken by
+        policy.forward.
+
+    :return: action in the same form of input "act" but remap to the target action
+        space.
+    """
+    if isinstance(self.action_space, gymnasium.spaces.Box) and \
+            isinstance(act, np.ndarray):
+        # currently this action mapping only supports np.ndarray action
+        if self.action_bound_method == "clip":
+            act = np.clip(act, -1.0, 1.0)
+        elif self.action_bound_method == "tanh":
+            act = np.tanh(act)
+        if self.action_scaling:
+            assert np.min(act) >= -1.0 and np.max(act) <= 1.0, \
+                "action scaling only accepts raw action range = [-1, 1]"
+            low, high = self.action_space.low, self.action_space.high
+            act = low + (high - low) * (act + 1.0) / 2.0  # type: ignore
+    if isinstance(self.action_space, gymnasium.spaces.Dict) and \
+        isinstance(act, np.ndarray):
+        flattened_space = flatten_space(self.action_space)
+        print(flattened_space)
+        act = [flattened_space[env_act] for env_act in act]
+    return act
 
 def train_agent(
     args: argparse.Namespace = get_args(),

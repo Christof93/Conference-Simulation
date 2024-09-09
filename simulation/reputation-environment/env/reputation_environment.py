@@ -117,13 +117,13 @@ class ReputationEnvironment(ParallelEnv):
                 "start_with_coauthors": Box(
                     0,
                     1,
-                    self.max_coauthors + 1,
+                    (self.max_coauthors + 1,),
                     np.int8
                 ),  # start a paper with n participants,
                 "collaborate":Box(
                     0,
                     1,
-                    self.n_possible_papers + 1,
+                    (self.n_possible_papers + 1,),
                     np.int8
                 ),  # collaborate on paper
                 "submit": Dict(
@@ -131,13 +131,13 @@ class ReputationEnvironment(ParallelEnv):
                         "id": Box(
                             0,
                             1,
-                            self.n_possible_papers + 1,
+                            (self.n_possible_papers + 1,),
                             np.int8
                         ),
                         "conference": Box(
                             0,
                             1,
-                            self.n_conferences,
+                            (self.n_conferences,),
                             np.int8
                         )
                     }
@@ -145,7 +145,7 @@ class ReputationEnvironment(ParallelEnv):
                 "contribute": Box(
                     0,
                     1,
-                    self.n_possible_papers + 1,
+                    (self.n_possible_papers + 1,),
                     np.int8
                 )  # contribute to paper
             }

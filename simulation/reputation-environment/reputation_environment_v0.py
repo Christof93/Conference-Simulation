@@ -2,12 +2,13 @@ import numpy as np
 
 from env.reputation_environment import ReputationEnvironment
 from env.evaluator import EnvironmentRecorder, NetworkEvaluator
+from gymnasium.spaces.utils import flatten
 
 from custom_policies import *
 
 if __name__=="__main__":
-    env = ReputationEnvironment(n_authors=500, n_conferences=10, render_mode="network", max_rewardless_steps=150, max_agent_steps=5000, max_coauthors=10)
-    # env = ReputationEnvironment(n_authors=10, n_conferences=1, render_mode="all", max_rewardless_steps=150, max_agent_steps=5000, max_coauthors=10)
+    # env = ReputationEnvironment(n_authors=500, n_conferences=10, render_mode="network", max_rewardless_steps=150, max_agent_steps=5000, max_coauthors=10)
+    env = ReputationEnvironment(n_authors=10, n_conferences=1, render_mode="all", max_rewardless_steps=150, max_agent_steps=5000, max_coauthors=10)
     recorder = EnvironmentRecorder(env)
     observations, infos = env.reset()
     agent_to_strategy = {}
@@ -29,6 +30,8 @@ if __name__=="__main__":
                 actions[agent] = malicious_policy(agent, env)
             elif agent_to_strategy[agent] == "diligent":
                 actions[agent] = diligent_policy(agent, env)
+                print(flatten(env.action_space(agent), actions[agent]))
+                breakpoint()
             elif agent_to_strategy[agent] == "picky":
                 actions[agent] = picky_policy(agent, env)
             else:
