@@ -30,7 +30,7 @@ if __name__=="__main__":
                 actions[agent] = malicious_policy(agent, env)
             elif agent_to_strategy[agent] == "diligent":
                 actions[agent] = diligent_policy(agent, env)
-                print(flatten(env.action_space(agent), actions[agent]))
+                print(actions[agent])
                 breakpoint()
             elif agent_to_strategy[agent] == "picky":
                 actions[agent] = picky_policy(agent, env)
