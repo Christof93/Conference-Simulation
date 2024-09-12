@@ -16,21 +16,19 @@ from typing import Optional, Tuple, Union, Any
 from collections import OrderedDict, deque
 
 import gymnasium
-from gymnasium.spaces.utils import flatten_space, flatdim, unflatten
+from gymnasium.spaces.utils import flatdim
 import numpy as np
 import torch
 import torch.nn as nn
-from tianshou.data import Collector, VectorReplayBuffer, Batch, to_numpy
+from tianshou.data import Collector, VectorReplayBuffer, Batch, to_numpy, ReplayBuffer
 from tianshou.env import DummyVectorEnv
 from tianshou.env.pettingzoo_env import PettingZooEnv
-from tianshou.policy import BasePolicy, DQNPolicy, MultiAgentPolicyManager, RandomPolicy
+from tianshou.policy import BasePolicy, DQNPolicy, MultiAgentPolicyManager
 from tianshou.trainer import offpolicy_trainer
 from tianshou.utils import TensorboardLogger
-from tianshou.utils.net.common import Net
 from torch.utils.tensorboard import SummaryWriter
 
 import env.reputation_environment as rep_env
-
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
@@ -124,6 +122,7 @@ def get_agents(
     optim: Optional[torch.optim.Optimizer] = None,
 ) -> Tuple[BasePolicy, torch.optim.Optimizer, list]:
     DQNPolicy.forward = forward
+    DQNPolicy._target_q = _target_q
     BasePolicy.map_action = map_action
     env = get_env()
     # observation_space = (
@@ -151,7 +150,7 @@ def get_agents(
                 target_update_freq=args.target_update_freq,
                 action_space = env.action_space
             )
-            agent_policies[agent].separate_actions = get_action_separations(self.action_space)
+            agent_policies[agent].separate_actions = get_action_separations(env.action_space)
             if args.resume_path:
                 agent_policies[agent].load_state_dict(torch.load(args.resume_path))
         agents = list(agent_policies.values())
@@ -242,8 +241,44 @@ def forward(
         if not hasattr(self, "max_action_num"):
             self.max_action_num = q.shape[1]
         np_tensor = to_numpy(q)
-        _, act = get_actions_from_q(self.action_space, np_tensor)
+        q_vals, act = get_actions_from_q(self.action_space, np_tensor)
         return Batch(logits=logits, act=act, state=hidden)
+
+
+def process_fn(
+        self, batch: Batch, buffer: ReplayBuffer, indices: np.ndarray
+    ) -> Batch:
+        """Compute the n-step return for Q-learning targets.
+
+        More details can be found at
+        :meth:`~tianshou.policy.BasePolicy.compute_nstep_return`.
+        """
+        # compute n_step return for all actions separately and then average it.
+        for sub_act, logit_split_indices in zip(batch.act, get_action_separations(self.action_space)):
+            sub_batch = Batch(act=sub_act, logits=batch.logits[:,np.arange(*logit_split_indices)], state=batch.state)
+            sub_batch = self.compute_nstep_return(
+                batch, buffer, indices, self._target_q, self._gamma, self._n_step,
+                self._rew_norm
+            )
+            batch.returns += sub_batch.returns / len(batch.act)
+        return batch
+
+def _target_q(self, buffer: ReplayBuffer, indices: np.ndarray) -> torch.Tensor:
+    batch = buffer[indices]  # batch.obs_next: s_{t+n}
+    result = self(batch, input="obs_next")
+    if self._target:
+        # target_Q = Q_old(s_, argmax(Q_new(s_, *)))
+        target_q = self(batch, model="model_old", input="obs_next").logits
+    else:
+        target_q = result.logits
+    if self._is_double:
+        target_qs = []
+        for act, action_indices in zip(result.act.T, get_action_separations(self.action_space)):
+            per_action_target_q = target_q[:, np.arange(*action_indices)][np.arange(act.shape[0]), act]
+            target_qs.append(per_action_target_q)
+        return target_qs
+    else:  # Nature DQN, over estimate
+        return target_q.max(dim=1)[0]
 
 def get_action_separations(space):
     return _get_action_separations(space, [])
@@ -251,7 +286,8 @@ def get_action_separations(space):
 def _get_action_separations(space, separations):
     for space in space.spaces.values():
         if isinstance(space, gymnasium.spaces.Discrete):
-            separations.append((len(separations), space.n))
+            current = np.sum(separations)
+            separations.append((current, current + space.n))
         if isinstance(space, gymnasium.spaces.Dict):
             separations = _get_action_separations(space, separations)
     return separations
