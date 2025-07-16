@@ -99,15 +99,18 @@ def get_args() -> argparse.Namespace:
 class MultiHeadNet(nn.Module):
     def __init__(self, state_shape, action_shapes, hidden_sizes):
         super().__init__()
+        # Build the shared feature extraction layers
         layers = [
             nn.Linear(np.prod(state_shape), 128), nn.ReLU(inplace=True),
         ]
         for size_in, size_out in zip(hidden_sizes[::2], hidden_sizes[1::2]):
             layers+=[nn.Linear(size_in, size_out), nn.ReLU(inplace=True)]
         self.shared_model = nn.Sequential(*layers)            
+        # Create a separate output head for each action
         self.heads = nn.ModuleList([nn.Linear(128, np.prod(action_shape)) for action_shape in action_shapes])
 
     def forward(self, obs, state=None, info={}):
+        # Forward pass through shared layers, then through each head
         if not isinstance(obs, torch.Tensor):
             obs = torch.tensor(obs, dtype=torch.float)
         batch = obs.shape[0]
@@ -121,20 +124,18 @@ def get_agents(
     agents: Optional[Tuple[BasePolicy]] = None,
     optim: Optional[torch.optim.Optimizer] = None,
 ) -> Tuple[BasePolicy, torch.optim.Optimizer, list]:
+    # Patch DQNPolicy and BasePolicy with custom methods for this environment
     DQNPolicy.forward = forward
     DQNPolicy._target_q = _target_q
     BasePolicy.map_action = map_action
     env = get_env()
-    # observation_space = (
-    #     env.observation_space["observation"]
-    #     if isinstance(env.observation_space, gymnasium.spaces.Dict)
-    #     else env.observation_space
-    # )
+    # Compute the flattened state and action shapes for the environment
     args.state_shape = (flatdim(env.observation_space),)
     args.action_shape = (flatdim(env.action_space),)
     if agents is None:
         agent_policies = {}
         for agent in env.agents:
+            # Create a separate network and policy for each agent
             net = MultiHeadNet(
                 args.state_shape,
                 args.action_shape,
@@ -150,40 +151,27 @@ def get_agents(
                 target_update_freq=args.target_update_freq,
                 action_space = env.action_space
             )
+            # Store action separation indices for each agent
             agent_policies[agent].separate_actions = get_action_separations(env.action_space)
             if args.resume_path:
                 agent_policies[agent].load_state_dict(torch.load(args.resume_path))
         agents = list(agent_policies.values())
 
+    # Wrap all agent policies in a MultiAgentPolicyManager
     policy = MultiAgentPolicyManager(agents, env)
     return policy, optim, env.agents
 
 
 def get_env(render_mode=None):
+    # Create the PettingZoo environment wrapped for Tianshou
     env = PettingZooEnv(rep_env.env({}, render_mode=render_mode))
     return env
 
 def map_action(self, act: Union[Batch, np.ndarray]) -> Union[Batch, np.ndarray]:
-    """Map raw network output to action range in gym's env.action_space.
-
-    This function is called in :meth:`~tianshou.data.Collector.collect` and only
-    affects action sending to env. Remapped action will not be stored in buffer
-    and thus can be viewed as a part of env (a black box action transformation).
-
-    Action mapping includes 2 standard procedures: bounding and scaling. Bounding
-    procedure expects original action range is (-inf, inf) and maps it to [-1, 1],
-    while scaling procedure expects original action range is (-1, 1) and maps it
-    to [action_space.low, action_space.high]. Bounding procedure is applied first.
-
-    :param act: a data batch or numpy.ndarray which is the action taken by
-        policy.forward.
-
-    :return: action in the same form of input "act" but remap to the target action
-        space.
-    """
+    """Map the raw network output to the action space of the environment, handling both Box and Dict spaces."""
     if isinstance(self.action_space, gymnasium.spaces.Box) and \
             isinstance(act, np.ndarray):
-        # currently this action mapping only supports np.ndarray action
+        # For continuous actions, clip or scale as needed
         if self.action_bound_method == "clip":
             act = np.clip(act, -1.0, 1.0)
         elif self.action_bound_method == "tanh":
@@ -195,6 +183,7 @@ def map_action(self, act: Union[Batch, np.ndarray]) -> Union[Batch, np.ndarray]:
             act = low + (high - low) * (act + 1.0) / 2.0  # type: ignore
     if isinstance(self.action_space, gymnasium.spaces.Dict) and \
         isinstance(act, np.ndarray):
+        # For Dict action spaces, convert the output to the nested action format
         act = [convert_output_to_env_action(self.action_space, deque(env_act)) for env_act in act]
     return act
 
@@ -206,33 +195,7 @@ def forward(
         input: str = "obs",
         **kwargs: Any,
     ) -> Batch:
-        """Compute action over the given batch data.
-
-        If you need to mask the action, please add a "mask" into batch.obs, for
-        example, if we have an environment that has "0/1/2" three actions:
-        ::
-
-            batch == Batch(
-                obs=Batch(
-                    obs="original obs, with batch_size=1 for demonstration",
-                    mask=np.array([[False, True, False]]),
-                    # action 1 is available
-                    # action 0 and 2 are unavailable
-                ),
-                ...
-            )
-
-        :return: A :class:`~tianshou.data.Batch` which has 3 keys:
-
-            * ``act`` the action.
-            * ``logits`` the network's raw output.
-            * ``state`` the hidden state.
-
-        .. seealso::
-
-            Please refer to :meth:`~tianshou.policy.BasePolicy.forward` for
-            more detailed explanation.
-        """
+        """Compute the Q-values and select actions for a batch of observations."""
         model = getattr(self, model)
         obs = batch[input]
         obs_next = obs.obs if hasattr(obs, "obs") else obs
@@ -248,12 +211,7 @@ def forward(
 def process_fn(
         self, batch: Batch, buffer: ReplayBuffer, indices: np.ndarray
     ) -> Batch:
-        """Compute the n-step return for Q-learning targets.
-
-        More details can be found at
-        :meth:`~tianshou.policy.BasePolicy.compute_nstep_return`.
-        """
-        # compute n_step return for all actions separately and then average it.
+        """Compute the n-step return for Q-learning targets, averaging over all actions."""
         for sub_act, logit_split_indices in zip(batch.act, get_action_separations(self.action_space)):
             sub_batch = Batch(act=sub_act, logits=batch.logits[:,np.arange(*logit_split_indices)], state=batch.state)
             sub_batch = self.compute_nstep_return(
@@ -264,35 +222,39 @@ def process_fn(
         return batch
 
 def _target_q(self, buffer: ReplayBuffer, indices: np.ndarray) -> torch.Tensor:
+    # Compute the target Q-values for the next state, supporting double DQN if enabled
     batch = buffer[indices]  # batch.obs_next: s_{t+n}
     result = self(batch, input="obs_next")
     if self._target:
-        # target_Q = Q_old(s_, argmax(Q_new(s_, *)))
+        # Use the target network for Q-value computation if available
         target_q = self(batch, model="model_old", input="obs_next").logits
     else:
         target_q = result.logits
     if self._is_double:
+        # For double DQN, select Q-values using the actions from the main network
         target_qs = []
         for act, action_indices in zip(result.act.T, get_action_separations(self.action_space)):
             per_action_target_q = target_q[:, np.arange(*action_indices)][np.arange(act.shape[0]), act]
             target_qs.append(per_action_target_q)
         return target_qs
-    else:  # Nature DQN, over estimate
+    else:  # Standard DQN, take the max Q-value
         return target_q.max(dim=1)[0]
 
 def get_action_separations(space):
+    # Recursively compute the start and end indices for each discrete action in a Dict space
     return _get_action_separations(space, [])
 
 def _get_action_separations(space, separations):
     for space in space.spaces.values():
         if isinstance(space, gymnasium.spaces.Discrete):
-            current = np.sum(separations)
+            current = sum([b-a for a, b in separations]) if separations else 0
             separations.append((current, current + space.n))
         if isinstance(space, gymnasium.spaces.Dict):
             separations = _get_action_separations(space, separations)
     return separations
 
 def get_actions_from_q(action_space, q):
+    # Given Q-values for all actions, extract the Q-values and selected actions for each sub-action
     q_remaining, acts = _get_actions_from_q(action_space, q, [])
     assert q_remaining.shape[1] == 0
     selected_actions = [np.argmax(act, axis=1) for act in acts]
@@ -308,6 +270,7 @@ def _get_actions_from_q(action_space, q, acts):
     return q, acts
 
 def _convert_output_to_env_action(action_space, output, valid_action):
+    # Recursively convert a flat output array into a nested dictionary action for Dict spaces
     for name, space in action_space.spaces.items():
         if isinstance(space, gymnasium.spaces.Discrete):
             valid_action[name] = output.popleft()
@@ -316,6 +279,7 @@ def _convert_output_to_env_action(action_space, output, valid_action):
     return output, valid_action
 
 def convert_output_to_env_action(action_space, output):
+    # Wrapper to convert a flat output to the environment's expected action format
     output, env_action = _convert_output_to_env_action(action_space, output, OrderedDict())
     assert len(output) == 0
     return env_action
@@ -325,21 +289,21 @@ def train_agent(
     agents: Optional[Tuple[BasePolicy]] = None,
     optim: Optional[torch.optim.Optimizer] = None,
 ) -> Tuple[dict, BasePolicy]:
-    # ======== environment setup =========
+    # Set up vectorized training and test environments
     train_envs = DummyVectorEnv([get_env for _ in range(args.training_num)])
     test_envs = DummyVectorEnv([get_env for _ in range(args.test_num)])
-    # seed
+    # Set random seeds for reproducibility
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     train_envs.seed(args.seed)
     test_envs.seed(args.seed)
 
-    # ======== agent setup =========
+    # Create agent policies and optimizers
     policy, optim, agents = get_agents(
         args, agents, optim=optim
     )
 
-    # ======== collector setup =========
+    # Set up collectors for experience gathering
     train_collector = Collector(
         policy,
         train_envs,
@@ -347,17 +311,18 @@ def train_agent(
         exploration_noise=False,
     )
     test_collector = Collector(policy, test_envs, exploration_noise=False)
-    # policy.set_eps(1)
+    # Pre-fill the replay buffer
     train_collector.collect(n_step=args.batch_size * args.training_num)
 
-    # ======== tensorboard logging setup =========
+    # Set up Tensorboard logging
     log_path = os.path.join(args.logdir, "academic_reputation", "dqn")
     writer = SummaryWriter(log_path)
     writer.add_text("args", str(args))
     logger = TensorboardLogger(writer)
 
-    # ======== callback functions used during training =========
+    # Define callback functions for training
     def save_best_fn(policy):
+        # Save the best model checkpoint
         if hasattr(args, "model_save_path"):
             model_save_path = args.model_save_path
         else:
@@ -369,18 +334,22 @@ def train_agent(
         )
 
     def stop_fn(mean_rewards):
+        # Stop training if the mean reward threshold is reached
         return mean_rewards >= args.target_mean_rewards
 
     def train_fn(epoch, env_step):
+        # Set exploration rate for training
         policy.policies[agents[args.agent_id - 1]].set_eps(args.eps_train)
 
     def test_fn(epoch, env_step):
+        # Set exploration rate for testing
         policy.policies[agents[args.agent_id - 1]].set_eps(args.eps_test)
 
     def reward_metric(rews):
+        # Extract the reward for the learning agent
         return rews[:, args.agent_id - 1]
 
-    # trainer
+    # Run the off-policy training loop
     result = offpolicy_trainer(
         policy,
         train_collector,
@@ -409,6 +378,7 @@ def watch(
     agent_learn: Optional[BasePolicy] = None,
     agent_opponent: Optional[BasePolicy] = None,
 ) -> None:
+    # Create a single environment for rendering and evaluation
     env = DummyVectorEnv([lambda: get_env(render_mode="human")])
     policy, optim, agents = get_agents(
         args, agent_learn=agent_learn, agent_opponent=agent_opponent
@@ -422,7 +392,7 @@ def watch(
 
 
 if __name__ == "__main__":
-    # train the agent and watch its performance in a match!
+    # Train the agent and then evaluate its performance
     args = get_args()
     result, agent = train_agent(args)
     watch(args, agent)
