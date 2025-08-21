@@ -113,9 +113,9 @@ class PeerGroupEnvironment(ParallelEnv):
                 f"agents are not evenly distributable into {self.peer_group_size} sized groups."
             )
         n_groups = self.n_agents // self.peer_group_size
-        self.peer_groups = [set() for _ in range(n_groups)]
+        self.peer_groups = [[] for _ in range(n_groups)]
         for i in range(self.n_agents):
-            self.peer_groups[i % n_groups].add(i)
+            self.peer_groups[i % n_groups].append(i)
         # Each agent has a fixed set of peers (not necessarily symmetric)
         self.agent_peer_idx = []  # List of sets of peer agent ids for each agent
         for i in range(self.n_agents):
@@ -125,13 +125,19 @@ class PeerGroupEnvironment(ParallelEnv):
     def _grow_peer_groups(self):
         # Pick a two random groups.
         self.peer_group_size += 1
-        perms = np.random.permutation(list(enumerate(self.peer_groups)))
-        if len(perms) % 2 != 0:
-            raise ValueError("Peer groups must be even")
+        if len(self.peer_groups) % 2 != 0:
+            raise ValueError(f"Peer groups must be even found {len(perms)}")
+        perms = list(
+            np.random.permutation(
+                np.array(list(enumerate(self.peer_groups)), dtype=object)
+            )
+        )
         for i in range(0, len(perms), 2):
             group_idx1, group1 = perms[i]
             group_idx2, group2 = perms[i + 1]
             # Pick a random agent from each group which isn't already in the other group.
+            group1 = set(group1)
+            group2 = set(group2)
             if len(group1 - group2) == 0 or len(group2 - group1) == 0:
                 continue
             try:
@@ -145,8 +151,10 @@ class PeerGroupEnvironment(ParallelEnv):
                 self._grow_peer_groups()
 
             # Add agent 1 to agents 2's peer group and vice versa.
-            self.peer_groups[group_idx1].add(agent_idx2)
-            self.peer_groups[group_idx2].add(agent_idx1)
+            if agent_idx2 not in self.peer_groups[group_idx1]:
+                self.peer_groups[group_idx1].append(agent_idx2)
+            if agent_idx1 not in self.peer_groups[group_idx2]:
+                self.peer_groups[group_idx2].append(agent_idx1)
 
         # Mark that peer groups have changed to invalidate cache
         self._peer_groups_changed = True
@@ -216,7 +224,7 @@ class PeerGroupEnvironment(ParallelEnv):
         self.agent_rewards = np.zeros(self.n_agents, dtype=np.float32)
         self.agent_ages = np.zeros(self.n_agents, dtype=np.int32)
         self.agent_completed_projects = np.zeros(self.n_agents, dtype=np.int32)
-        self.agent_active_projects = [[] for _ in range(self.n_agents)]
+        self.agent_active_projects = [set() for _ in range(self.n_agents)]
         self.agent_project_effort = [{} for _ in range(self.n_agents)]
         self._init_peer_groups()
         self.projects = {}
@@ -248,7 +256,7 @@ class PeerGroupEnvironment(ParallelEnv):
         idx = self.agent_to_id[agent]
         # Peer group: sorted array of peer agent ids
         peer_group = np.array(
-            sorted(self.peer_groups[self.agent_peer_idx[idx]]), dtype=np.int32
+            self.peer_groups[self.agent_peer_idx[idx]], dtype=np.int32
         )
         peer_reputation = self.agent_rewards[peer_group].astype(np.float32)
         obs = {
@@ -301,8 +309,8 @@ class PeerGroupEnvironment(ParallelEnv):
             mask["choose_project"][:] = 0
             mask["choose_project"][0] = 1  # Only 'no project' allowed
         # Peer collaboration: MultiBinary for peer group
-        peer_group = sorted(self.peer_groups[self.agent_peer_idx[idx]])
-        mask["collaborate_with"] = np.ones(len(peer_group), dtype=np.int8)
+        peer_group = self.peer_groups[self.agent_peer_idx[idx]]
+        mask["collaborate_with"] = np.ones(len(peer_group), dtype=np.int8) + 1
         # exclude self collaboration
         mask["collaborate_with"][peer_group.index(idx)] = 0
         # Effort: can only put effort into active projects
@@ -317,44 +325,87 @@ class PeerGroupEnvironment(ParallelEnv):
         return mask
 
     def _start_open_project(self, project_idx, contributors):
-        project_id = len(self.projects)
+        project_id = f"project_{len(self.projects)}-{project_idx}-{self.timestep}"
+        suffix = [str(project_idx), str(self.timestep)]
+        ## if the project was already added make sure all the contributors are there.
+        for contributor in contributors:
+            if (
+                len(self.agent_active_projects[contributor])
+                >= self.max_projects_per_agent
+            ):
+                return
+            for proj in self.agent_active_projects[contributor]:
+                # the project was already started in the same timestep by this agent
+                if proj.split("-")[-2:] == suffix:
+                    # ignore
+                    if len(contributors) <= len(self.projects[proj]["contributors"]):
+                        return
+                    # reconfigure the project
+                    else:
+                        project_id = proj
+
         new_running_proj = deepcopy(self.open_projects[project_idx])
-        new_running_proj["id"] = f"project_{project_id}-{project_idx}-{self.timestep}"
+        new_running_proj["id"] = project_id
         new_running_proj["contributors"] = contributors
         new_running_proj["peer_fit"] = new_running_proj["fit"][contributors]
         del new_running_proj["fit"]
         for contributor in contributors:
-            self.agent_active_projects[contributor].append(new_running_proj["id"])
+            self.agent_active_projects[contributor].add(new_running_proj["id"])
             self.agent_project_effort[contributor][new_running_proj["id"]] = 0
-
+        print(f'started: {new_running_proj["id"]} with contributors {contributors}')
         self.projects[new_running_proj["id"]] = new_running_proj
         return project_id
 
     def _find_project_setting(self, project_idx, peer_group, intents):
-        if len(intents) == 0:
+        if len(peer_group) == 0:
             return []
         ## no collaboration
         elif not np.any(intents):
             new_projects = []
             for agent in peer_group:
                 running_project_idx = self._start_open_project(project_idx, [agent])
-                new_projects.append((running_project_idx, [agent]))
+                if running_project_idx is not None:
+                    new_projects.append((running_project_idx, [agent]))
             return new_projects
         else:
             ## Find the biggest overlap of collaborators on the same project as the largest clique in the collaboration graph
-            collaborators = max(
-                list(nx.find_cliques(nx.from_numpy_array(intents))), key=len
-            )
-            running_project_idx = self._start_open_project(
-                project_idx, peer_group[collaborators]
-            )
+            grouped_collaborators = set()
+            running_project_idx = None
+            try:
+                for collaborators in sorted(
+                    list(nx.find_cliques(nx.from_numpy_array(intents))), key=len
+                ):
+                    already_at_limit = set(
+                        [
+                            c
+                            for c in collaborators
+                            if len(self.agent_active_projects[c])
+                            >= self.max_projects_per_agent
+                        ]
+                    )
+                    if len(already_at_limit) == 0:
+                        print(f" found clique: {collaborators}")
+                        running_project_idx = self._start_open_project(
+                            project_idx, peer_group[collaborators]
+                        )
+                        grouped_collaborators |= set(collaborators)
+                    else:
+                        grouped_collaborators |= already_at_limit
+            except Exception as e:
+                print(e)
+                breakpoint()
+
+            new_project = []
+
+            if running_project_idx is not None:
+                new_project = [(running_project_idx, peer_group[collaborators])]
+
             ## repeat the process with any remaining agents and possible subgroups
-            return [
-                (running_project_idx, peer_group[collaborators])
-            ] + self._find_project_setting(
+            intents[:] = 0
+            return new_project + self._find_project_setting(
                 project_idx,
-                np.delete(peer_group, collaborators),
-                np.delete(intents, collaborators, axis=0),
+                np.delete(peer_group, np.array(list(grouped_collaborators))),
+                intents,
             )
 
     def step(self, actions):
@@ -381,7 +432,9 @@ class PeerGroupEnvironment(ParallelEnv):
                 and len(self.agent_active_projects[idx]) >= action["put_effort"]
             ):
                 selected_project = action["put_effort"] - 1
-                effort_project_id = self.agent_active_projects[idx][selected_project]
+                effort_project_id = sorted(list(self.agent_active_projects[idx]))[
+                    selected_project
+                ]
                 effort_project = self.projects[effort_project_id]
                 effort_amount = effort_project["peer_fit"][
                     np.where(effort_project["contributors"] == idx)[0]
@@ -399,7 +452,11 @@ class PeerGroupEnvironment(ParallelEnv):
 
         # Collaboration intents (for each agent, with their peers)
         for peer_group in self.peer_groups:
-            peer_group = np.array(sorted(peer_group))
+            peer_group = np.array(sorted(list(peer_group)))
+            print(peer_group)
+            for agent in peer_group:
+                print(agent)
+                print(self.action_masks[f"agent_{agent}"]["collaborate_with"])
             peer_group_choices = [
                 agent_project_choices.get(pc_idx, None) for pc_idx in peer_group
             ]
@@ -409,6 +466,10 @@ class PeerGroupEnvironment(ParallelEnv):
                     for gm_idx in peer_group
                 ]
             )
+            print("choices:")
+            print(peer_group_choices)
+            print("intents:")
+            print(peer_group_intents)
             for choice, _ in Counter(peer_group_choices).most_common():
                 if choice is not None:
                     # get all collaborators which took this choice
@@ -416,7 +477,8 @@ class PeerGroupEnvironment(ParallelEnv):
                         np.array(peer_group_choices) == choice
                     )[0]
                     collaborator_group = peer_group[potential_collaborators]
-
+                    print("same choice:")
+                    print(potential_collaborators)
                     # find overlaps in collaboration intents of collaborators
                     try:
                         collaborators_intents = peer_group_intents[
@@ -429,10 +491,11 @@ class PeerGroupEnvironment(ParallelEnv):
                     collaborators_intents = (
                         collaborators_intents & collaborators_intents.T
                     )
-                    running_projects = self._find_project_setting(
+                    print("mutual intent:")
+                    print(collaborators_intents)
+                    self._find_project_setting(
                         choice, collaborator_group, collaborators_intents
                     )
-                    print(collaborators_intents)
                     print()
 
         # Check project completion and assign rewards
@@ -484,7 +547,7 @@ class PeerGroupEnvironment(ParallelEnv):
                 idx = self.agent_to_id[agent]
                 self.agent_ages[idx] = 0
                 self.agent_completed_projects[idx] = 0
-                self.agent_active_projects[idx] = []
+                self.agent_active_projects[idx] = set()
                 self.agent_project_effort[idx] = {}
                 self.agent_rewards[idx] = 0
                 self.agent_steps[idx] = 0
