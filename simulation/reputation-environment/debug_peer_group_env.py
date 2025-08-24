@@ -25,7 +25,7 @@ def convert_numpy(obj):
 # Initialize environment
 env = PeerGroupEnvironment(
     n_agents=80,
-    peer_group_size=4,
+    peer_group_size=8,
     n_projects=6,
     max_projects_per_agent=5,
     max_timesteps=1000,
@@ -42,6 +42,11 @@ stats = SimulationStats()
 logs_dir = os.path.join(os.path.dirname(__file__), "log")
 os.makedirs(logs_dir, exist_ok=True)
 jsonl_path = os.path.join(logs_dir, "stats.jsonl")
+projects_jsonl_path = os.path.join(logs_dir, "projects.jsonl")
+with open(jsonl_path, "w") as jf:
+    jf.write("")
+with open(projects_jsonl_path, "w") as jf:
+    jf.write("")
 
 for step in range(1000):
     actions = {}
@@ -51,9 +56,13 @@ for step in range(1000):
     stats.update(env, obs, rewards, terminations, truncations)
     print(f"\nStep {step+1}")
     for agent in env.agents:
-
+        # if agent=="agent_0" and step>750:
+        #     print(env._get_active_projects(0))
+        #     print(env.action_masks[agent])
+        #     print(actions[agent])
         obs_converted = convert_numpy(obs[agent])
-        # print(f"{agent} obs: {json.dumps(obs_converted, indent=2)}")
+        # if agent=="agent_0":
+        #     print(f"{agent} obs: {json.dumps(obs_converted, indent=2)}")
 
         # Uncomment and fix the rewards line too
         rewards_converted = convert_numpy(rewards[agent])
@@ -70,3 +79,13 @@ for step in range(1000):
 final_summary_path = os.path.join(logs_dir, "final_summary.json")
 with open(final_summary_path, "w") as sf:
     json.dump(stats.to_dict(), sf, indent=2)
+
+# Write project-level details to JSONL
+project_details = stats.get_project_details()
+for project in sorted(project_details, key=lambda x: x["start_time"]):
+    with open(projects_jsonl_path, "a") as jf:
+        jf.write(json.dumps(project) + "\n")
+
+print(
+    f"\nSimulation completed. Logged {len(project_details)} finished projects to {projects_jsonl_path}"
+)
