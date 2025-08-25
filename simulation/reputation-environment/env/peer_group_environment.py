@@ -299,7 +299,7 @@ class PeerGroupEnvironment(ParallelEnv):
         obs = {
             "peer_group": peer_group,
             "peer_reputation": peer_reputation,
-            "project_opportunities": self.open_projects,
+            "project_opportunities": self._get_open_projects_obs(idx),
             "running_projects": self._get_running_projects_obs(idx, peer_group),
             "age": np.array([self.agent_ages[idx]], dtype=np.int32),
             "accumulated_rewards": np.array(
@@ -307,6 +307,12 @@ class PeerGroupEnvironment(ParallelEnv):
             ),
         }
         return obs
+
+    def _get_open_projects_obs(self, agent_idx: int) -> List[Dict[str, Any]]:
+        agent_open_projs = deepcopy(self.open_projects)
+        for proj in agent_open_projs:
+            proj["fit"] = proj["fit"][agent_idx]
+        return agent_open_projs
 
     def _get_running_projects_obs(
         self, agent_idx: int, peer_group: np.ndarray
