@@ -125,13 +125,10 @@ class SimulationStats:
 
         # 2) Track newly finished projects and record their stats once
         for proj_id, proj in getattr(env, "projects", {}).items():
-            if (
-                proj.get("finished")
-                and proj.get("id") not in self.finished_projects_seen
-            ):
-                self.finished_projects_seen.add(proj.get("id"))
+            if proj.finished and proj.project_id not in self.finished_projects_seen:
+                self.finished_projects_seen.add(proj.project_id)
                 self.finished_projects_count += 1
-
+                proj = proj.to_dict()
                 project_effort = _as_float(proj.get("current_effort", 0.0))
                 self.finished_projects_efforts.append(project_effort)
                 self.finished_projects_durations.append(
@@ -210,9 +207,8 @@ class SimulationStats:
 
         # Team sizes for each running or finished project (by id)
         for proj in getattr(env, "projects", {}).values():
-            proj_id = str(proj.get("id"))
-            team_size = int(len(proj.get("contributors", [])))
-            project_team_sizes[proj_id] = team_size
+            team_size = int(len(proj.to_dict().get("contributors", [])))
+            project_team_sizes[proj.project_id] = team_size
 
         aggregates: Dict[str, float] = {
             "avg_age": _safe_mean(ages),
@@ -226,11 +222,7 @@ class SimulationStats:
             "avg_open_approx_reward": _safe_mean(open_approx_rewards),
             "avg_open_time_window": _safe_mean(open_time_windows),
             "active_projects_count": float(
-                sum(
-                    1
-                    for p in getattr(env, "projects", {}).values()
-                    if not p.get("finished", False)
-                )
+                sum(1 for p in getattr(env, "projects", {}).values() if not p.finished)
             ),
         }
         # Attach nested dict (kept separate from numeric fields)

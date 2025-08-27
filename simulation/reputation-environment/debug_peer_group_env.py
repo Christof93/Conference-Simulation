@@ -24,12 +24,14 @@ def convert_numpy(obj):
 
 # Initialize environment
 env = PeerGroupEnvironment(
-    n_agents=80,
-    peer_group_size=8,
+    start_agents=20,
+    max_agents=80,
+    n_groups=4,
+    max_peer_group_size=40,
     n_projects=6,
     max_projects_per_agent=5,
-    max_timesteps=1000,
-    max_rewardless_steps=1000,
+    max_agent_age=500,
+    max_rewardless_steps=250,
 )
 
 obs, infos = env.reset(seed=SEED)
@@ -56,10 +58,10 @@ for step in range(1000):
     stats.update(env, obs, rewards, terminations, truncations)
     print(f"\nStep {step+1}")
     for agent in env.agents:
-        # if agent=="agent_0" and step>750:
-        #     print(env._get_active_projects(0))
-        #     print(env.action_masks[agent])
-        #     print(actions[agent])
+        if agent == "agent_0" and step > 50:
+            #     print(env._get_active_projects(0))
+            #     print(env.action_masks[agent])
+            print(env.agent_active_projects[0])
         obs_converted = convert_numpy(obs[agent])
         # if agent=="agent_0":
         #     print(f"{agent} obs: {json.dumps(obs_converted, indent=2)}")
