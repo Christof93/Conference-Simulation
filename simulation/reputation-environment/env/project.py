@@ -4,7 +4,7 @@ import numpy as np
 
 
 class Project:
-    """Represents a scientific project/paper in the simulation."""
+    """Represents a scientific project in the simulation."""
 
     def __init__(
         self,
@@ -31,7 +31,9 @@ class Project:
         self.kene: Optional[np.array] = kwargs.get("kene", None)
         self.citations: List[str] = kwargs.get("citations", [])
         self.cited_by: List[str] = kwargs.get("cited_by", [])
-        self.generator_paper_id: Optional[str] = kwargs.get("generator_paper_id", None)
+        self.generator_project_id: Optional[str] = kwargs.get(
+            "generator_project_id", None
+        )
         self.novelty: float = kwargs.get("novelty", 0.5)
 
         # Validation and quality metrics
@@ -68,7 +70,8 @@ class Project:
     def calculate_quality(self, noise_factor: float = 0.5) -> float:
         """Calculate the final quality of the completed project."""
 
-        self.validation_noise = np.random.normal(1, noise_factor)
+        # the higher the prestige the samller the noise
+        self.validation_noise = np.random.normal(1, noise_factor * (1 - self.prestige))
         # Base quality based on effort and prestige
         self.quality_score = (
             1
@@ -82,7 +85,7 @@ class Project:
         return self.quality_score
 
     def calculate_reward(self, quality, threshold=0.5, noise_factor=0.15) -> float:
-        if quality > 0.5:
+        if quality > threshold * self.prestige:
             self.final_reward = self.prestige + np.random.normal(0, noise_factor)
         else:
             self.final_reward = 0
@@ -109,7 +112,7 @@ class Project:
             "kene": self.kene,
             "citations": self.citations.copy(),
             "cited_by": self.cited_by.copy(),
-            "generator_paper_id": self.generator_paper_id,
+            "generator_project_id": self.generator_project_id,
             "validation_noise": self.validation_noise,
             "quality_score": self.quality_score,
         }
@@ -138,7 +141,7 @@ class Project:
         project.kene = data.get("kene")
         project.citations = data.get("citations", [])
         project.cited_by = data.get("cited_by", [])
-        project.generator_paper_id = data.get("generator_paper_id")
+        project.generator_project_id = data.get("generator_project_id")
         project.validation_noise = data.get("validation_noise", 0.0)
         project.quality_score = data.get("quality_score", 0.0)
         project.novelty = data.get("novelty", 0.5)
@@ -147,18 +150,24 @@ class Project:
 
     def as_observation_dict(self) -> Dict:
         return {
-            "required_effort": self.required_effort,
-            "prestige": self.prestige,
-            "time_window": self.time_window,
+            "required_effort": np.array(
+                [self.required_effort], dtype=np.int32
+            ),  # Box(0, 200, (1,), dtype=np.int32),
+            "prestige": np.array(
+                [self.prestige], dtype=np.float32
+            ),  # Box(0, 1, (1,), dtype=np.float32),
+            "novelty": np.array(
+                [self.novelty], dtype=np.float32
+            ),  # Box(0, 1, (1,), dtype=np.float32),
             "peer_fit": (
                 self.peer_fit.tolist()
                 if isinstance(self.peer_fit, np.ndarray)
                 else self.peer_fit
             ),
-            "novelty": self.novelty,
-            "current_effort": self.current_effort,
             "contributors": self.contributors.copy(),
+            "current_effort": np.array([self.current_effort], dtype=np.float32),
             "start_time": self.start_time,
+            "time_window": self.time_window,
         }
 
     def __str__(self) -> str:

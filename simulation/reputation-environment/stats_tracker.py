@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-from tracemalloc import start
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import numpy as np
@@ -58,6 +57,14 @@ class SimulationStats:
         self.peer_group_sizes: List[List[int]] = []  # Track peer group sizes over time
         self.success_rates_over_time: List[float] = []  # Track success rates over time
 
+        # Enhanced metrics for visualizations
+        self.papers_per_author: Dict[str, int] = {}  # agent_name -> paper_count
+        self.authors_per_paper: List[int] = []  # team sizes for all papers
+        self.prestige_category_stats: Dict[int, Dict[str, int]] = (
+            {}
+        )  # category -> {success: count, total: count}
+        self.effort_ratios: List[float] = []  # actual_effort / required_effort ratios
+
     def reset(self) -> None:
         self.__init__()
 
@@ -76,6 +83,8 @@ class SimulationStats:
         for agent in getattr(env, "agents", []):
             if agent not in self.total_effort_per_agent:
                 self.total_effort_per_agent[agent] = 0.0
+            if agent not in self.papers_per_author:
+                self.papers_per_author[agent] = 0
 
         # 1) New effort applied this step (delta from last snapshot)
         # env.agent_project_effort is a list indexed by agent id: Dict[project_id, cumulative_effort]
@@ -147,8 +156,11 @@ class SimulationStats:
                     self.unsuccessful_projects_count += 1
                     self.unsuccessful_projects_efforts.append(project_effort)
 
+                # Enhanced metrics tracking
+                # self._track_enhanced_metrics(env, proj, proj_id, project_reward > 0)
+
                 # Log detailed project metrics
-                self._log_finished_project(env, proj, proj_id)
+                # self._log_finished_project(env, proj, proj_id)
 
         # 3) Rewards distributed this step (sum across agents)
         if rewards:
@@ -158,6 +170,48 @@ class SimulationStats:
 
         # 4) Aggregate observation values (ages, reputations, running projects, open opportunities)
         self.last_obs_aggregate = self._compute_observation_aggregates(env, obs)
+
+    def _track_enhanced_metrics(
+        self, env: Any, proj: Dict[str, Any], proj_id: str, is_successful: bool
+    ) -> None:
+        """Track enhanced metrics for visualizations."""
+        # Track authors per paper
+        team_size = len(proj.get("contributors", []))
+        self.authors_per_paper.append(team_size)
+
+        # Track effort ratio (actual / required)
+        required_effort = _as_float(proj.get("required_effort", 1.0))
+        actual_effort = _as_float(proj.get("current_effort", 0.0))
+        if required_effort > 0:
+            effort_ratio = actual_effort / required_effort
+            self.effort_ratios.append(effort_ratio)
+
+        # Track prestige category stats
+        # Extract project template index from project ID (format: "project_{len}-{template_idx}-{timestep}")
+        try:
+            parts = proj_id.split("-")
+            if len(parts) >= 3:
+                template_idx = int(parts[-2])  # Second to last part
+                prestige_category = template_idx % 3  # 0: low, 1: medium, 2: high
+
+                if prestige_category not in self.prestige_category_stats:
+                    self.prestige_category_stats[prestige_category] = {
+                        "success": 0,
+                        "total": 0,
+                    }
+
+                self.prestige_category_stats[prestige_category]["total"] += 1
+                if is_successful:
+                    self.prestige_category_stats[prestige_category]["success"] += 1
+        except (ValueError, IndexError):
+            pass  # Skip if project ID format is unexpected
+
+        # Track papers per author
+        contributors = proj.get("contributors", [])
+        for agent_idx in contributors:
+            agent_name = f"agent_{agent_idx}"
+            if agent_name in self.papers_per_author:
+                self.papers_per_author[agent_name] += 1
 
     def _compute_observation_aggregates(
         self, env: Any, obs: Dict[str, Any]
@@ -316,6 +370,48 @@ class SimulationStats:
             "avg_reward_per_step": avg_reward_per_step,
             "per_agent_total_effort": dict(self.total_effort_per_agent),
             "observation_aggregates": dict(self.last_obs_aggregate),
+            # Enhanced metrics for visualizations
+            "papers_per_author": dict(self.papers_per_author),
+            "authors_per_paper": self.authors_per_paper.copy(),
+            "prestige_category_stats": dict(self.prestige_category_stats),
+            "effort_ratios": self.effort_ratios.copy(),
+        }
+
+    def get_visualization_data(self) -> Dict[str, Any]:
+        """Get data specifically formatted for visualizations."""
+        # Calculate acceptance rates per prestige category
+        acceptance_rates = {}
+        for category, stats in self.prestige_category_stats.items():
+            if stats["total"] > 0:
+                acceptance_rates[category] = stats["success"] / stats["total"]
+            else:
+                acceptance_rates[category] = 0.0
+
+        # Calculate effort ratio statistics
+        effort_ratio_stats = {}
+        if self.effort_ratios:
+            effort_ratio_stats = {
+                "min": min(self.effort_ratios),
+                "max": max(self.effort_ratios),
+                "mean": sum(self.effort_ratios) / len(self.effort_ratios),
+                "median": (
+                    sorted(self.effort_ratios)[len(self.effort_ratios) // 2]
+                    if len(self.effort_ratios) % 2 == 1
+                    else (
+                        sorted(self.effort_ratios)[len(self.effort_ratios) // 2 - 1]
+                        + sorted(self.effort_ratios)[len(self.effort_ratios) // 2]
+                    )
+                    / 2
+                ),
+            }
+
+        return {
+            "papers_per_author": self.papers_per_author,
+            "authors_per_paper": self.authors_per_paper,
+            "prestige_category_stats": self.prestige_category_stats,
+            "acceptance_rates": acceptance_rates,
+            "effort_ratios": self.effort_ratios,
+            "effort_ratio_stats": effort_ratio_stats,
         }
 
     def summary_line(self) -> str:

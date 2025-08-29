@@ -8,12 +8,47 @@ from pathlib import Path
 import numpy as np
 from agent_policies import create_mixed_policy_population, get_policy_function
 from env.peer_group_environment import PeerGroupEnvironment
+from log_simulation import SimLog
 from stats_tracker import SimulationStats
+
+# Define different policy distributions to test
+POLICY_CONFIGS = {
+    "All Careerist": {
+        "careerist": 1.0,
+        "orthodox_scientist": 0.0,
+        "mass_producer": 0.0,
+    },
+    "All Orthodox": {
+        "careerist": 0.0,
+        "orthodox_scientist": 1.0,
+        "mass_producer": 0.0,
+    },
+    "All Mass Producer": {
+        "careerist": 0.0,
+        "orthodox_scientist": 0.0,
+        "mass_producer": 1.0,
+    },
+    "Balanced": {
+        "careerist": 1 / 3,
+        "orthodox_scientist": 1 / 3,
+        "mass_producer": 1 / 3,
+    },
+    "Careerist Heavy": {
+        "careerist": 0.6,
+        "orthodox_scientist": 0.2,
+        "mass_producer": 0.2,
+    },
+    "Orthodox Heavy": {
+        "careerist": 0.2,
+        "orthodox_scientist": 0.6,
+        "mass_producer": 0.2,
+    },
+}
 
 
 def run_simulation_with_policies(
-    n_agents: int = 20,
-    max_steps: int = 100,
+    n_agents: int = 200,
+    max_steps: int = 1000,
     policy_distribution: dict = None,
     output_file: str = "policy_simulation_results.jsonl",
 ):
@@ -29,12 +64,14 @@ def run_simulation_with_policies(
 
     # Create environment
     env = PeerGroupEnvironment(
-        n_agents=n_agents,
-        peer_group_size=5,
+        start_agents=60,
+        max_agents=n_agents,
+        n_groups=8,
+        max_peer_group_size=40,
         n_projects=6,
-        max_projects_per_agent=3,
-        max_timesteps=max_steps,
-        max_rewardless_steps=50,
+        max_projects_per_agent=5,
+        max_agent_age=500,
+        max_rewardless_steps=250,
     )
 
     # Create agent policy assignments
@@ -45,6 +82,13 @@ def run_simulation_with_policies(
 
     # Initialize stats tracker
     stats = SimulationStats()
+    log = SimLog(
+        "log",
+        "policy_sim_actions.jsonl",
+        "policy_sim_observations.jsonl",
+        "policy_sim_projects.json",
+    )
+    log.start()
 
     # Reset environment
     observations, infos = env.reset()
@@ -62,7 +106,6 @@ def run_simulation_with_policies(
             # Get agent's observation and action mask
             obs = observations[agent]["observation"]
             action_mask = observations[agent]["action_mask"]
-
             # Generate action using the agent's policy
             action = policy_func(obs, action_mask)
             actions[agent] = action
@@ -70,6 +113,18 @@ def run_simulation_with_policies(
         # Step the environment
         observations, rewards, terminations, truncations, infos = env.step(actions)
 
+        log.log_observation(
+            [
+                obs if env.active_agents[env.agent_to_id[a]] == 1 else None
+                for a, obs in observations.items()
+            ]
+        )
+        log.log_action(
+            [
+                act if env.active_agents[env.agent_to_id[a]] == 1 else None
+                for a, act in actions.items()
+            ]
+        )
         # Update stats
         stats.update(env, observations, rewards, terminations, truncations)
 
@@ -78,10 +133,10 @@ def run_simulation_with_policies(
             print(f"Step {step}: {stats.summary_line()}")
 
         # Check if all agents are done
-        if all(terminations.values()) or all(truncations.values()):
+        if all(terminations.values()):
             print(f"Simulation ended at step {step}")
             break
-
+    log.log_projects(env.projects.values())
     # Save results
     results = {
         "final_stats": stats.to_dict(),
@@ -108,50 +163,16 @@ def run_simulation_with_policies(
 def compare_policy_performances():
     """Compare the performance of different policy distributions."""
 
-    # Define different policy distributions to test
-    policy_configs = {
-        "All Careerist": {
-            "careerist": 1.0,
-            "orthodox_scientist": 0.0,
-            "mass_producer": 0.0,
-        },
-        "All Orthodox": {
-            "careerist": 0.0,
-            "orthodox_scientist": 1.0,
-            "mass_producer": 0.0,
-        },
-        "All Mass Producer": {
-            "careerist": 0.0,
-            "orthodox_scientist": 0.0,
-            "mass_producer": 1.0,
-        },
-        "Balanced": {
-            "careerist": 1 / 3,
-            "orthodox_scientist": 1 / 3,
-            "mass_producer": 1 / 3,
-        },
-        "Careerist Heavy": {
-            "careerist": 0.6,
-            "orthodox_scientist": 0.2,
-            "mass_producer": 0.2,
-        },
-        "Orthodox Heavy": {
-            "careerist": 0.2,
-            "orthodox_scientist": 0.6,
-            "mass_producer": 0.2,
-        },
-    }
-
     results = {}
 
-    for config_name, policy_dist in policy_configs.items():
+    for config_name, policy_dist in POLICY_CONFIGS.items():
         print(f"\n{'='*50}")
         print(f"Testing: {config_name}")
         print(f"{'='*50}")
 
         result = run_simulation_with_policies(
-            n_agents=20,
-            max_steps=100,
+            n_agents=200,
+            max_steps=1000,
             policy_distribution=policy_dist,
             output_file=f"results_{config_name.lower().replace(' ', '_')}.json",
         )
@@ -175,9 +196,11 @@ def compare_policy_performances():
 if __name__ == "__main__":
     # Run a single simulation with balanced policies
     print("Running single simulation with balanced policies...")
-    run_simulation_with_policies()
+    run_simulation_with_policies(
+        policy_distribution=POLICY_CONFIGS["All Mass Producer"]
+    )
 
-    # Compare different policy distributions
-    print("\n" + "=" * 80)
-    print("Comparing different policy distributions...")
-    compare_policy_performances()
+    # # Compare different policy distributions
+    # print("\n" + "=" * 80)
+    # print("Comparing different policy distributions...")
+    # compare_policy_performances()
