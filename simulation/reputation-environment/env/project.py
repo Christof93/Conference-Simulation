@@ -2,6 +2,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from .area import Area
+
 
 class Project:
     """Represents a scientific project in the simulation."""
@@ -67,22 +69,37 @@ class Project:
         """Check if the project is overdue."""
         return current_timestep >= (self.start_time + self.time_window)
 
-    def calculate_quality(self, noise_factor: float = 0.5) -> float:
+    def calculate_quality(
+        self, topic_area: Area, n_similar_projects: int, noise_factor: float = 0.5
+    ) -> float:
         """Calculate the final quality of the completed project."""
 
         # the higher the prestige the samller the noise
         self.validation_noise = np.random.normal(1, noise_factor * (1 - self.prestige))
         # Base quality based on effort and prestige
+        self.effort_score = self.calculate_effort_score(self.validation_noise)
+        self.novelty_score = self.calculate_novelty_score(n_similar_projects)
+        self.societal_value_score = self.calculate_societal_value_score(topic_area)
         self.quality_score = (
-            1
-            - (
-                max(0, self.required_effort - self.current_effort)
-                * self.validation_noise
-            )
-            / self.required_effort
+            1 / 3 * self.effort_score
+            + 1 / 3 * self.novelty_score
+            + 1 / 3 * self.societal_value_score
         )
         # Add validation noise
         return self.quality_score
+
+    def calculate_effort_score(self, noise=1.0):
+        return (
+            1
+            - (max(0, self.required_effort - self.current_effort) * noise)
+            / self.required_effort
+        )
+
+    def calculate_novelty_score(self, n_similar_projects):
+        return 1 / (n_similar_projects + 1)
+
+    def calculate_societal_value_score(self, topic_area: Area):
+        return topic_area.value_at(*self.kene)
 
     def calculate_reward(self, quality, threshold=0.5, noise_factor=0.15) -> float:
         if quality > threshold * self.prestige:

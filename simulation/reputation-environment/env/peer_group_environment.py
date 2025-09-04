@@ -1,6 +1,5 @@
 from collections import Counter
 from copy import copy, deepcopy
-from multiprocessing import active_children
 from typing import Any, Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
 import networkx as nx
@@ -8,9 +7,9 @@ import numpy as np
 from gymnasium.spaces import Box
 from gymnasium.spaces import Dict as GymDict
 from gymnasium.spaces import Discrete, MultiBinary
-from pandas.core.dtypes.cast import construct_2d_arraylike_from_scalar
 from pettingzoo import ParallelEnv
 
+from .area import Area
 from .project import Project
 
 
@@ -96,7 +95,8 @@ class PeerGroupEnvironment(ParallelEnv):
         self.open_projects: List[Dict[str, Any]] = []
         # The chosen projects will be added here
         self.projects: Dict[str, Project] = {}
-
+        # the ared in which the projects will be situated
+        self.area: Area = None
         self.project_templates: List[Dict[str, Any]] = [
             # low novelty, low effort, low prestige
             {
@@ -135,6 +135,16 @@ class PeerGroupEnvironment(ParallelEnv):
                 "novelty": 0.5,
             },
         ]
+
+    def _init_project_topic_plane(self, n_gaussians=100) -> None:
+        self.area = Area(xlim=(0, 1), ylim=(0, 1))
+
+        # Add Gaussian areas
+        for i in range(n_gaussians):
+            value = 1.0 if i % 2 == 0 else -1.0
+            self.area.add_gaussian_area(
+                *self.area.random_point(), sigma=0.005, value=value
+            )
 
     def _init_peer_groups(self) -> None:
         if self.n_agents < self.n_groups:
@@ -264,6 +274,7 @@ class PeerGroupEnvironment(ParallelEnv):
 
         # Reinitialize core structures
         self._init_peer_groups()
+        self._init_project_topic_plane()
         self._generate_projects()
         self.projects = {}
         self.agents = copy(self.possible_agents)
@@ -430,45 +441,59 @@ class PeerGroupEnvironment(ParallelEnv):
         return project_id
 
     def _locate_project_in_plane(self, new_project: Project) -> np.array:
+        """
+        The project must only be located once (side effects)
+        """
         # select a random generator project from all authors in peer group
         all_contributors_projects = []
         for agent_i in new_project.contributors:
             all_contributors_projects += self.agent_successful_projects[agent_i]
         # choose weighted by contributor reputation?
+        generator_project = None
         if len(all_contributors_projects) > 0:
             generator_project = self.projects[
                 np.random.choice(all_contributors_projects)
             ]
             new_kene = generator_project.kene
             new_project.generator_project_id = generator_project.project_id
+            all_contributors_projects = [
+                p
+                for p in all_contributors_projects
+                if p != generator_project.project_id
+            ]
         else:
             peer_group_idx = self.agent_peer_idx[new_project.contributors[0]]
             new_kene = self.peer_group_centroids[peer_group_idx]
 
         # select 10-20 projects as citation which are in the area of novelty around the generator
-        projects_in_vicinity = []
-        vicinity_area = Novelty_area(
-            new_kene[0] - new_project.novelty,
-            new_kene[0] + new_project.novelty,
-            new_kene[1] - new_project.novelty,
-            new_kene[1] + new_project.novelty,
+        all_project_kenes = np.array(
+            [
+                self.projects[project_id].kene
+                for project_id in all_contributors_projects
+                if project_id != generator_project.project_id
+            ]
         )
-        for project_id in self.agent_successful_projects[agent_i]:
-            if (
-                self.projects[project_id].kene in vicinity_area
-                and project_id != generator_project.project_id
-            ):
-                projects_in_vicinity.append(project_id)
+
+        # no projects
+        if len(all_contributors_projects) == 0:
+            new_project.citations = []
+            return new_kene + np.random.normal(0, new_project.novelty / 2, 2)
+
+        projects_in_vicinity = np.array(all_contributors_projects)[
+            self.area.distance(all_project_kenes, new_kene) <= new_project.novelty
+        ]
+        # no projects in vicinity
         if len(projects_in_vicinity) == 0:
             new_project.citations = []
-            return new_kene + np.random.uniform(0, 0.1, 2)
+            return new_kene + np.random.normal(0, new_project.novelty / 2, 2)
+
         n_cited = min(len(projects_in_vicinity), np.random.randint(10, 21))
         # weighted by n citations?
         cited_projects = np.random.choice(projects_in_vicinity, n_cited)
         m = 0
         for cited_project in cited_projects:
             cited_project = self.projects[cited_project]
-            cited_project.cited_by.append(project_id)
+            cited_project.cited_by.append(new_project.project_id)
             cited_position = cited_project.kene
             m += np.random.uniform(0, 0.1)
             new_kene += (new_kene - cited_position) * (1 - m) / 2
@@ -584,10 +609,25 @@ class PeerGroupEnvironment(ParallelEnv):
         self.rewards = {a: 0.0 for a in self.agents}
         for p_idx, p in self.projects.items():
             if p.is_due(self.timestep) and p.finished is False:
-                quality = p.calculate_quality(noise_factor=0.2)
+                all_project_kenes = [
+                    p.kene
+                    for p in self.projects.values()
+                    if p.finished and p.final_reward > 0
+                ]
+                if len(all_project_kenes) > 0:
+                    n_projects_in_vicinity = np.sum(
+                        [self.area.distance(all_project_kenes, p.kene) <= 0.05]
+                    )
+                else:
+                    n_projects_in_vicinity = 0
+                quality = p.calculate_quality(
+                    topic_area=self.area,
+                    n_similar_projects=n_projects_in_vicinity,
+                    noise_factor=0.2,
+                )
                 quality = np.clip(quality, 0, 1)
 
-                reward = p.calculate_reward(quality, threshold=0.5, noise_factor=0.05)
+                reward = p.calculate_reward(quality, threshold=0.5, noise_factor=0)
                 for idx in p.contributors:
                     self._remove_active_project(idx, p_idx)
                     if reward > 0:

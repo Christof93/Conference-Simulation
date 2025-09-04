@@ -79,7 +79,7 @@ def _mask_allowed(mask_arr: Any, idx: int) -> bool:
 def careerist_policy(
     observation: Dict[str, Any],
     action_mask: Dict[str, np.ndarray],
-    reward_threshold: float = 0.5,
+    prestige_threshold: float = 0.5,
     **kwargs,
 ) -> Dict[str, Any]:
     # Unwrap if wrapped as { 'observation': ..., 'action_mask': ... }
@@ -99,7 +99,7 @@ def careerist_policy(
     )
     for i, proj_key, proj in _iter_project_opportunities(project_opportunities):
         prestige = proj["prestige"]
-        if prestige >= reward_threshold and _mask_allowed(choose_project_mask, i):
+        if prestige >= prestige_threshold and _mask_allowed(choose_project_mask, i):
             valid_projects.append((i, prestige))
     chosen_project = (
         valid_projects
@@ -367,7 +367,7 @@ def test_policies():
 
     print("Testing Careerist Policy:")
     careerist_action = careerist_policy(
-        sample_observation, sample_action_mask, reward_threshold=0.3
+        sample_observation, sample_action_mask, prestige_threshold=0.3
     )
     print(f"  Chosen project: {careerist_action['choose_project']}")
     print(f"  Collaboration: {careerist_action['collaborate_with']}")

@@ -50,7 +50,7 @@ def run_simulation_with_policies(
     n_agents: int = 200,
     max_steps: int = 1000,
     policy_distribution: dict = None,
-    output_file: str = "policy_simulation_results.jsonl",
+    output_file_prefix: str = "policy_simu",
 ):
     """
     Run a simulation with different agent policies.
@@ -84,14 +84,14 @@ def run_simulation_with_policies(
     stats = SimulationStats()
     log = SimLog(
         "log",
-        "policy_sim_actions.jsonl",
-        "policy_sim_observations.jsonl",
-        "policy_sim_projects.json",
+        f"{output_file_prefix}_actions.jsonl",
+        f"{output_file_prefix}_observations.jsonl",
+        f"{output_file_prefix}_projects.json",
     )
     log.start()
 
     # Reset environment
-    observations, infos = env.reset()
+    observations, infos = env.reset(seed=42)
 
     # Simulation loop
     for step in range(max_steps):
@@ -136,6 +136,7 @@ def run_simulation_with_policies(
         if all(terminations.values()):
             print(f"Simulation ended at step {step}")
             break
+
     log.log_projects(env.projects.values())
     # Save results
     results = {
@@ -145,7 +146,7 @@ def run_simulation_with_policies(
         or {"careerist": 1 / 3, "orthodox_scientist": 1 / 3, "mass_producer": 1 / 3},
     }
 
-    with open(output_file, "w") as f:
+    with open(output_file_prefix + "_summary.json", "w") as f:
         json.dump(results, f, indent=2)
 
     print(f"\nFinal Results:")
@@ -174,7 +175,7 @@ def compare_policy_performances():
             n_agents=200,
             max_steps=1000,
             policy_distribution=policy_dist,
-            output_file=f"results_{config_name.lower().replace(' ', '_')}.json",
+            output_file_prefix=f"policy_{config_name.lower().replace(' ', '_')}",
         )
 
         results[config_name] = result["final_stats"]
@@ -195,12 +196,12 @@ def compare_policy_performances():
 
 if __name__ == "__main__":
     # Run a single simulation with balanced policies
-    print("Running single simulation with balanced policies...")
-    run_simulation_with_policies(
-        policy_distribution=POLICY_CONFIGS["All Mass Producer"]
-    )
+    # print("Running single simulation with balanced policies...")
+    # run_simulation_with_policies(
+    #     policy_distribution=POLICY_CONFIGS["All Mass Producer"]
+    # )
 
-    # # Compare different policy distributions
-    # print("\n" + "=" * 80)
-    # print("Comparing different policy distributions...")
-    # compare_policy_performances()
+    # Compare different policy distributions
+    print("\n" + "=" * 80)
+    print("Comparing different policy distributions...")
+    compare_policy_performances()
