@@ -47,8 +47,11 @@ POLICY_CONFIGS = {
 
 
 def run_simulation_with_policies(
-    n_agents: int = 200,
-    max_steps: int = 1000,
+    n_agents: int = 100,
+    max_steps: int = 1_000,
+    start_agents: int = 60,
+    n_groups: int = 8,
+    max_peer_group_size: int = 40,
     policy_distribution: dict = None,
     output_file_prefix: str = "policy_simu",
 ):
@@ -64,10 +67,10 @@ def run_simulation_with_policies(
 
     # Create environment
     env = PeerGroupEnvironment(
-        start_agents=60,
+        start_agents=start_agents,
         max_agents=n_agents,
-        n_groups=8,
-        max_peer_group_size=40,
+        n_groups=n_groups,
+        max_peer_group_size=max_peer_group_size,
         n_projects=6,
         max_projects_per_agent=5,
         max_agent_age=500,
@@ -112,7 +115,9 @@ def run_simulation_with_policies(
 
         # Step the environment
         observations, rewards, terminations, truncations, infos = env.step(actions)
-
+        if step > 500:
+            active_agent_1 = list(env.active_agents).index(1)
+            print(env.action_masks[f"agent_{active_agent_1}"])
         log.log_observation(
             [
                 obs if env.active_agents[env.agent_to_id[a]] == 1 else None
@@ -138,6 +143,8 @@ def run_simulation_with_policies(
             break
 
     log.log_projects(env.projects.values())
+    env.area.save(f"log/{output_file_prefix}_area.pickle")
+
     # Save results
     results = {
         "final_stats": stats.to_dict(),
@@ -172,8 +179,11 @@ def compare_policy_performances():
         print(f"{'='*50}")
 
         result = run_simulation_with_policies(
-            n_agents=200,
-            max_steps=1000,
+            n_agents=2_000,
+            start_agents=100,
+            max_steps=5_000,
+            n_groups=50,
+            max_peer_group_size=100,
             policy_distribution=policy_dist,
             output_file_prefix=f"policy_{config_name.lower().replace(' ', '_')}",
         )
@@ -196,12 +206,17 @@ def compare_policy_performances():
 
 if __name__ == "__main__":
     # Run a single simulation with balanced policies
-    # print("Running single simulation with balanced policies...")
-    # run_simulation_with_policies(
-    #     policy_distribution=POLICY_CONFIGS["All Mass Producer"]
-    # )
+    print("Running single simulation with balanced policies...")
+    run_simulation_with_policies(
+        n_agents=2_000,
+        start_agents=100,
+        max_steps=5_000,
+        n_groups=50,
+        max_peer_group_size=100,
+        policy_distribution=POLICY_CONFIGS["Balanced"],
+    )
 
     # Compare different policy distributions
-    print("\n" + "=" * 80)
-    print("Comparing different policy distributions...")
-    compare_policy_performances()
+    # print("\n" + "=" * 80)
+    # print("Comparing different policy distributions...")
+    # compare_policy_performances()

@@ -88,24 +88,35 @@ def careerist_policy(
 
     project_opportunities = observation.get("project_opportunities", {})
 
-    # Choose project: highest prestige above threshold
-    valid_projects: List[tuple] = []
-    choose_project_mask = action_mask.get(
-        "choose_project",
-        np.ones(
-            len(getattr(project_opportunities, "items", lambda: [])()) + 1,
-            dtype=np.int8,
-        ),
-    )
-    for i, proj_key, proj in _iter_project_opportunities(project_opportunities):
-        prestige = proj["prestige"]
-        if prestige >= prestige_threshold and _mask_allowed(choose_project_mask, i):
-            valid_projects.append((i, prestige))
-    chosen_project = (
-        valid_projects
-        and sorted(valid_projects, key=lambda x: x[1], reverse=True)[0][0]
-        or 0
-    )
+    current = observation.get("running_projects", {})
+    chosen_project = None
+    for proj_key, proj in current.items():
+        if (
+            proj["time_left"] / len(proj["contributors"])
+            < proj["required_effort"] - proj["current_effort"]
+        ):
+            chosen_project = 0
+            break
+    if chosen_project is None:
+        # Choose project: highest prestige above threshold
+        valid_projects: List[tuple] = []
+        choose_project_mask = action_mask.get(
+            "choose_project",
+            np.ones(
+                len(getattr(project_opportunities, "items", lambda: [])()) + 1,
+                dtype=np.int8,
+            ),
+        )
+
+        for i, proj_key, proj in _iter_project_opportunities(project_opportunities):
+            prestige = proj["prestige"]
+            if prestige >= prestige_threshold and _mask_allowed(choose_project_mask, i):
+                valid_projects.append((i, prestige))
+        chosen_project = (
+            valid_projects
+            and sorted(valid_projects, key=lambda x: x[1], reverse=True)[0][0]
+            or 0
+        )
 
     # Collaboration: active peers with above-average reputation
     peer_reputation = np.array(observation.get("peer_reputation", []), dtype=np.float32)
@@ -159,53 +170,43 @@ def orthodox_scientist_policy(
         observation = observation["observation"]
 
     project_opportunities = observation.get("project_opportunities", {})
-
-    # Choose project: lowest novelty (best fit to existing), tie-breaker by prestige desc
-    choose_project_mask = action_mask.get(
-        "choose_project",
-        np.ones(
-            len(getattr(project_opportunities, "items", lambda: [])()) + 1,
-            dtype=np.int8,
-        ),
-    )
-    ranked: List[tuple] = []
-    for i, proj_key, proj in _iter_project_opportunities(project_opportunities):
-        if _mask_allowed(choose_project_mask, i):
-            ranked.append((i, proj["novelty"], proj["prestige"]))
-    if ranked:
-        ranked.sort(key=lambda x: (x[1], -x[2]))  # min novelty, then max prestige
-        chosen_project = ranked[0][0]
-    else:
-        chosen_project = 0
+    current = observation.get("running_projects", {})
+    chosen_project = None
+    for proj_key, proj in current.items():
+        if (
+            proj["time_left"] / len(proj["contributors"])
+            < proj["required_effort"] - proj["current_effort"]
+        ):
+            chosen_project = 0
+            break
+    if chosen_project is None:
+        # Choose project: lowest novelty (best fit to existing), tie-breaker by prestige desc
+        choose_project_mask = action_mask.get(
+            "choose_project",
+            np.ones(
+                len(getattr(project_opportunities, "items", lambda: [])()) + 1,
+                dtype=np.int8,
+            ),
+        )
+        ranked: List[tuple] = []
+        for i, proj_key, proj in _iter_project_opportunities(project_opportunities):
+            if _mask_allowed(choose_project_mask, i):
+                ranked.append((i, proj["novelty"], proj["prestige"]))
+        if ranked:
+            ranked.sort(key=lambda x: (x[1], -x[2]))  # min novelty, then max prestige
+            chosen_project = ranked[0][0]
+        else:
+            chosen_project = 0
 
     # Collaboration: if any running project exists, collaborate with peers whose peer_fit >= threshold
     peer_group_active = np.array(observation.get("peer_group", []), dtype=np.int8)
     collaborate_mask = action_mask.get(
-        "collaborate_with", np.ones_like(peer_group_active, dtype=np.int8)
+        "collaborate_with", np.ones_like(peer_group_active, dtype=np.int8) + 1
     )
     running_projects = observation.get("running_projects", {})
-    collaborate_with = np.zeros_like(peer_group_active, dtype=np.int8)
-    rp_items = _iter_running_projects(running_projects)
-    if rp_items:
-        # pick the project with highest max peer_fit
-        best = None
-        for proj_key, proj in rp_items:
-            if len(proj["peer_fit"]) == len(peer_group_active):
-                max_fit = (
-                    float(np.max(proj["peer_fit"]))
-                    if proj["peer_fit"].size > 0
-                    else 0.0
-                )
-                if best is None or max_fit > best[0]:
-                    best = (max_fit, proj)
-        if best is not None:
-            fit_vec = best[1]["peer_fit"]
-            desired = (fit_vec >= fit_threshold).astype(np.int8) * (
-                peer_group_active > 0
-            ).astype(np.int8)
-            collaborate_with = ((desired > 0) & (collaborate_mask > 0)).astype(np.int8)
+    collaborate_with = np.ones_like(peer_group_active, dtype=np.int8)
 
-    # Effort: best fitting active project under +10% threshold
+    # Effort: best fitting active project under -10% threshold
     put_effort = 0
     put_effort_mask = action_mask.get("put_effort", np.ones(1, dtype=np.int8))
     candidates = []
@@ -213,10 +214,16 @@ def orthodox_scientist_policy(
         _iter_running_projects(running_projects), start=1
     ):
         required = proj["required_effort"]
-        threshold = required * 1.1
-        if proj["current_effort"] < threshold and _mask_allowed(
+        threshold = required * 0.9
+        if proj["current_effort"] > threshold and _mask_allowed(
             put_effort_mask, slot_idx
         ):
+            return {
+                "choose_project": chosen_project,
+                "collaborate_with": collaborate_with,
+                "put_effort": slot_idx,
+            }
+        else:
             # use max peer_fit as proxy for fit
             max_fit = (
                 float(np.max(proj["peer_fit"])) if len(proj["peer_fit"]) > 0 else 0.0

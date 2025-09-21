@@ -13,17 +13,14 @@ from .area import Area
 from .project import Project
 
 
-class Novelty_area(NamedTuple):
-    x_min: float
-    x_max: float
-    y_min: float
-    y_max: float
-
-    def __contains__(self, coordinate: Tuple[float, float]):
-        return (
-            self.x_min < coordinate[0] < self.x_max
-            and self.y_min < coordinate[1] < self.y_max
-        )
+def sigmoid(x, midpoint=0.0, sharpness=1.0):
+    """
+    Standard sigmoid curve.
+    - x: input value
+    - midpoint: the x-value where sigmoid = 0.5
+    - sharpness: controls steepness (higher = steeper)
+    """
+    return 1.0 / (1.0 + np.exp(-sharpness * (x - midpoint)))
 
 
 class PeerGroupEnvironment(ParallelEnv):
@@ -143,7 +140,7 @@ class PeerGroupEnvironment(ParallelEnv):
         for i in range(n_gaussians):
             value = 1.0 if i % 2 == 0 else -1.0
             self.area.add_gaussian_area(
-                *self.area.random_point(), sigma=0.005, value=value
+                *self.area.random_point(), sigma=0.015, value=value
             )
 
     def _init_peer_groups(self) -> None:
@@ -477,7 +474,9 @@ class PeerGroupEnvironment(ParallelEnv):
         # no projects
         if len(all_contributors_projects) == 0:
             new_project.citations = []
-            return new_kene + np.random.normal(0, new_project.novelty / 2, 2)
+            new_kene = new_kene + np.random.normal(0, new_project.novelty / 2, 2)
+            new_kene = np.clip(new_kene, 0, 1)
+            return new_kene
 
         projects_in_vicinity = np.array(all_contributors_projects)[
             self.area.distance(all_project_kenes, new_kene) <= new_project.novelty
@@ -485,7 +484,9 @@ class PeerGroupEnvironment(ParallelEnv):
         # no projects in vicinity
         if len(projects_in_vicinity) == 0:
             new_project.citations = []
-            return new_kene + np.random.normal(0, new_project.novelty / 2, 2)
+            new_kene = new_kene + np.random.normal(0, new_project.novelty / 2, 2)
+            new_kene = np.clip(new_kene, 0, 1)
+            return new_kene
 
         n_cited = min(len(projects_in_vicinity), np.random.randint(10, 21))
         # weighted by n citations?
@@ -498,6 +499,7 @@ class PeerGroupEnvironment(ParallelEnv):
             m += np.random.uniform(0, 0.1)
             new_kene += (new_kene - cited_position) * (1 - m) / 2
         new_project.citations = cited_projects
+        new_kene = np.clip(new_kene, 0, 1)
         return new_kene
 
     def _determine_agent_fit(self, project: Project, agent_i: int) -> float:
@@ -616,6 +618,7 @@ class PeerGroupEnvironment(ParallelEnv):
                 ]
                 if len(all_project_kenes) > 0:
                     n_projects_in_vicinity = np.sum(
+                        ## TODO: vicinity needs to become smaller as simulation progresses
                         [self.area.distance(all_project_kenes, p.kene) <= 0.05]
                     )
                 else:
@@ -641,20 +644,37 @@ class PeerGroupEnvironment(ParallelEnv):
         for idx, agent in enumerate(self.agents):
             if self.active_agents[idx] == 1:
                 self.agent_steps[idx] += 1
-            if self.rewards[agent] > 0:
-                self.rewardless_steps[idx] = 0
-            else:
-                self.rewardless_steps[idx] += 1
+                if self.rewards[agent] > 0:
+                    self.rewardless_steps[idx] = 0
+                else:
+                    self.rewardless_steps[idx] += 1
 
         truncations = {a: False for a in self.agents}
-        # Drop agents with too many rewardless steps or max timesteps
-        terminations = {
-            a: (
-                self.rewardless_steps[self.agent_to_id[a]] >= self.max_rewardless_steps
-                or self.agent_steps[self.agent_to_id[a]] >= self.max_agent_age
+        # Drop agents randomly way more likely with too many rewardless steps or max timesteps
+
+        terminations = {}
+        for a in self.agents:
+            idx = self.agent_to_id[a]
+            if self.active_agents[idx] != 1:
+                terminations[a] = False
+                continue
+
+            # Probability of termination becomes higher nearing the max value
+            rewardless_dist = self.rewardless_steps[idx] - self.max_rewardless_steps
+            age_dist = self.agent_steps[idx] - self.max_agent_age
+            rewardless_prob = sigmoid(
+                rewardless_dist,
+                midpoint=self.max_rewardless_steps * 0.25,
+                sharpness=0.25,
             )
-            for a in self.agents
-        }
+            age_prob = sigmoid(
+                age_dist, midpoint=self.max_agent_age * 0.25, sharpness=0.25
+            )
+
+            termination_prob = max(rewardless_prob, age_prob)
+            # Stochastic decision
+            terminations[a] = np.random.rand() < termination_prob
+
         self.terminated_agents = self.terminated_agents | np.fromiter(
             terminations.values(), dtype=bool
         )
@@ -672,7 +692,7 @@ class PeerGroupEnvironment(ParallelEnv):
                 agents_activated_in_step.append(self._activate_agent(group))
         # grow active agents
         if self.growth_rate < 1:
-            if self.timestep % (1 // self.growth_rate) == 0:
+            if self.timestep % (1 // self.growth_rate) == 0 and np.random.rand() < 0.7:
                 # choice weighted by success?
                 group = np.random.choice(range(self.n_groups))
                 agents_activated_in_step.append(self._activate_agent(group))
@@ -685,8 +705,13 @@ class PeerGroupEnvironment(ParallelEnv):
                 group = np.random.choice(range(self.n_groups))
                 agents_activated_in_step.append(self._activate_agent(group))
 
-        # if not all([a is not None for a in agents_activated_in_step]):
-        #     print("No more agents to activate!")
+        if len(agents_activated_in_step) > 0:
+            print(
+                f"Activated {len(agents_activated_in_step)} agents in step {self.timestep}"
+            )
+
+        if not all([a is not None for a in agents_activated_in_step]):
+            print("No more agents to activate!")
         # breakpoint()
         # Prepare next obs/mask
         observations = {}

@@ -11,16 +11,18 @@ git+https://github.com/thu-ml/tianshou
 
 import argparse
 import os
-from copy import deepcopy
-from typing import Optional, Tuple, Union, Any
 from collections import OrderedDict, deque
+from copy import deepcopy
+from typing import Any, Optional, Tuple, Union
 
+import env.reputation_environment as rep_env
 import gymnasium
-from gymnasium.spaces.utils import flatdim
 import numpy as np
 import torch
 import torch.nn as nn
-from tianshou.data import Collector, VectorReplayBuffer, Batch, to_numpy, ReplayBuffer
+from gymnasium.spaces.utils import flatdim
+from tianshou.data import (Batch, Collector, ReplayBuffer, VectorReplayBuffer,
+                           to_numpy)
 from tianshou.env import DummyVectorEnv
 from tianshou.env.pettingzoo_env import PettingZooEnv
 from tianshou.policy import BasePolicy, DQNPolicy, MultiAgentPolicyManager
@@ -28,7 +30,6 @@ from tianshou.trainer import offpolicy_trainer
 from tianshou.utils import TensorboardLogger
 from torch.utils.tensorboard import SummaryWriter
 
-import env.reputation_environment as rep_env
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
@@ -96,18 +97,22 @@ def get_args() -> argparse.Namespace:
     parser = get_parser()
     return parser.parse_known_args()[0]
 
+
 class MultiHeadNet(nn.Module):
     def __init__(self, state_shape, action_shapes, hidden_sizes):
         super().__init__()
         # Build the shared feature extraction layers
         layers = [
-            nn.Linear(np.prod(state_shape), 128), nn.ReLU(inplace=True),
+            nn.Linear(np.prod(state_shape), 128),
+            nn.ReLU(inplace=True),
         ]
         for size_in, size_out in zip(hidden_sizes[::2], hidden_sizes[1::2]):
-            layers+=[nn.Linear(size_in, size_out), nn.ReLU(inplace=True)]
-        self.shared_model = nn.Sequential(*layers)            
+            layers += [nn.Linear(size_in, size_out), nn.ReLU(inplace=True)]
+        self.shared_model = nn.Sequential(*layers)
         # Create a separate output head for each action
-        self.heads = nn.ModuleList([nn.Linear(128, np.prod(action_shape)) for action_shape in action_shapes])
+        self.heads = nn.ModuleList(
+            [nn.Linear(128, np.prod(action_shape)) for action_shape in action_shapes]
+        )
 
     def forward(self, obs, state=None, info={}):
         # Forward pass through shared layers, then through each head
@@ -149,10 +154,12 @@ def get_agents(
                 args.gamma,
                 args.n_step,
                 target_update_freq=args.target_update_freq,
-                action_space = env.action_space
+                action_space=env.action_space,
             )
             # Store action separation indices for each agent
-            agent_policies[agent].separate_actions = get_action_separations(env.action_space)
+            agent_policies[agent].separate_actions = get_action_separations(
+                env.action_space
+            )
             if args.resume_path:
                 agent_policies[agent].load_state_dict(torch.load(args.resume_path))
         agents = list(agent_policies.values())
@@ -167,59 +174,77 @@ def get_env(render_mode=None):
     env = PettingZooEnv(rep_env.env({}, render_mode=render_mode))
     return env
 
+
 def map_action(self, act: Union[Batch, np.ndarray]) -> Union[Batch, np.ndarray]:
     """Map the raw network output to the action space of the environment, handling both Box and Dict spaces."""
-    if isinstance(self.action_space, gymnasium.spaces.Box) and \
-            isinstance(act, np.ndarray):
+    if isinstance(self.action_space, gymnasium.spaces.Box) and isinstance(
+        act, np.ndarray
+    ):
         # For continuous actions, clip or scale as needed
         if self.action_bound_method == "clip":
             act = np.clip(act, -1.0, 1.0)
         elif self.action_bound_method == "tanh":
             act = np.tanh(act)
         if self.action_scaling:
-            assert np.min(act) >= -1.0 and np.max(act) <= 1.0, \
-                "action scaling only accepts raw action range = [-1, 1]"
+            assert (
+                np.min(act) >= -1.0 and np.max(act) <= 1.0
+            ), "action scaling only accepts raw action range = [-1, 1]"
             low, high = self.action_space.low, self.action_space.high
             act = low + (high - low) * (act + 1.0) / 2.0  # type: ignore
-    if isinstance(self.action_space, gymnasium.spaces.Dict) and \
-        isinstance(act, np.ndarray):
+    if isinstance(self.action_space, gymnasium.spaces.Dict) and isinstance(
+        act, np.ndarray
+    ):
         # For Dict action spaces, convert the output to the nested action format
-        act = [convert_output_to_env_action(self.action_space, deque(env_act)) for env_act in act]
+        act = [
+            convert_output_to_env_action(self.action_space, deque(env_act))
+            for env_act in act
+        ]
     return act
 
+
 def forward(
-        self,
-        batch: Batch,
-        state: Optional[Union[dict, Batch, np.ndarray]] = None,
-        model: str = "model",
-        input: str = "obs",
-        **kwargs: Any,
-    ) -> Batch:
-        """Compute the Q-values and select actions for a batch of observations."""
-        model = getattr(self, model)
-        obs = batch[input]
-        obs_next = obs.obs if hasattr(obs, "obs") else obs
-        logits, hidden = model(obs_next, state=state, info=batch.info)
-        q = self.compute_q_value(logits, getattr(obs, "mask", None))
-        if not hasattr(self, "max_action_num"):
-            self.max_action_num = q.shape[1]
-        np_tensor = to_numpy(q)
-        q_vals, act = get_actions_from_q(self.action_space, np_tensor)
-        return Batch(logits=logits, act=act, state=hidden)
+    self,
+    batch: Batch,
+    state: Optional[Union[dict, Batch, np.ndarray]] = None,
+    model: str = "model",
+    input: str = "obs",
+    **kwargs: Any,
+) -> Batch:
+    """Compute the Q-values and select actions for a batch of observations."""
+    model = getattr(self, model)
+    obs = batch[input]
+    obs_next = obs.obs if hasattr(obs, "obs") else obs
+    logits, hidden = model(obs_next, state=state, info=batch.info)
+    q = self.compute_q_value(logits, getattr(obs, "mask", None))
+    if not hasattr(self, "max_action_num"):
+        self.max_action_num = q.shape[1]
+    np_tensor = to_numpy(q)
+    q_vals, act = get_actions_from_q(self.action_space, np_tensor)
+    return Batch(logits=logits, act=act, state=hidden)
 
 
-def process_fn(
-        self, batch: Batch, buffer: ReplayBuffer, indices: np.ndarray
-    ) -> Batch:
-        """Compute the n-step return for Q-learning targets, averaging over all actions."""
-        for sub_act, logit_split_indices in zip(batch.act, get_action_separations(self.action_space)):
-            sub_batch = Batch(act=sub_act, logits=batch.logits[:,np.arange(*logit_split_indices)], state=batch.state)
-            sub_batch = self.compute_nstep_return(
-                batch, buffer, indices, self._target_q, self._gamma, self._n_step,
-                self._rew_norm
-            )
-            batch.returns += sub_batch.returns / len(batch.act)
-        return batch
+def process_fn(self, batch: Batch, buffer: ReplayBuffer, indices: np.ndarray) -> Batch:
+    """Compute the n-step return for Q-learning targets, averaging over all actions."""
+    for sub_act, logit_split_indices in zip(
+        batch.act, get_action_separations(self.action_space)
+    ):
+        sub_batch = Batch(
+            act=sub_act,
+            logits=batch.logits[:, np.arange(*logit_split_indices)],
+            state=batch.state,
+        )
+        sub_batch = self.compute_nstep_return(
+            batch,
+            buffer,
+            indices,
+            self._target_q,
+            self._gamma,
+            self._n_step,
+            self._rew_norm,
+        )
+        batch.returns += sub_batch.returns / len(batch.act)
+    return batch
+
 
 def _target_q(self, buffer: ReplayBuffer, indices: np.ndarray) -> torch.Tensor:
     # Compute the target Q-values for the next state, supporting double DQN if enabled
@@ -233,25 +258,32 @@ def _target_q(self, buffer: ReplayBuffer, indices: np.ndarray) -> torch.Tensor:
     if self._is_double:
         # For double DQN, select Q-values using the actions from the main network
         target_qs = []
-        for act, action_indices in zip(result.act.T, get_action_separations(self.action_space)):
-            per_action_target_q = target_q[:, np.arange(*action_indices)][np.arange(act.shape[0]), act]
+        for act, action_indices in zip(
+            result.act.T, get_action_separations(self.action_space)
+        ):
+            per_action_target_q = target_q[:, np.arange(*action_indices)][
+                np.arange(act.shape[0]), act
+            ]
             target_qs.append(per_action_target_q)
         return target_qs
     else:  # Standard DQN, take the max Q-value
         return target_q.max(dim=1)[0]
 
+
 def get_action_separations(space):
     # Recursively compute the start and end indices for each discrete action in a Dict space
     return _get_action_separations(space, [])
 
+
 def _get_action_separations(space, separations):
     for space in space.spaces.values():
         if isinstance(space, gymnasium.spaces.Discrete):
-            current = sum([b-a for a, b in separations]) if separations else 0
+            current = sum([b - a for a, b in separations]) if separations else 0
             separations.append((current, current + space.n))
         if isinstance(space, gymnasium.spaces.Dict):
             separations = _get_action_separations(space, separations)
     return separations
+
 
 def get_actions_from_q(action_space, q):
     # Given Q-values for all actions, extract the Q-values and selected actions for each sub-action
@@ -260,14 +292,16 @@ def get_actions_from_q(action_space, q):
     selected_actions = [np.argmax(act, axis=1) for act in acts]
     return acts, np.transpose(np.array(selected_actions))
 
+
 def _get_actions_from_q(action_space, q, acts):
     for space in action_space.spaces.values():
         if isinstance(space, gymnasium.spaces.Discrete):
-            acts.append(q[:, :space.n])
-            q = q[:, space.n:]
+            acts.append(q[:, : space.n])
+            q = q[:, space.n :]
         if isinstance(space, gymnasium.spaces.Dict):
             q, acts = _get_actions_from_q(space, q, acts)
     return q, acts
+
 
 def _convert_output_to_env_action(action_space, output, valid_action):
     # Recursively convert a flat output array into a nested dictionary action for Dict spaces
@@ -275,14 +309,20 @@ def _convert_output_to_env_action(action_space, output, valid_action):
         if isinstance(space, gymnasium.spaces.Discrete):
             valid_action[name] = output.popleft()
         if isinstance(space, gymnasium.spaces.Dict):
-            output, valid_action[name] = _convert_output_to_env_action(space, output, OrderedDict())
+            output, valid_action[name] = _convert_output_to_env_action(
+                space, output, OrderedDict()
+            )
     return output, valid_action
+
 
 def convert_output_to_env_action(action_space, output):
     # Wrapper to convert a flat output to the environment's expected action format
-    output, env_action = _convert_output_to_env_action(action_space, output, OrderedDict())
+    output, env_action = _convert_output_to_env_action(
+        action_space, output, OrderedDict()
+    )
     assert len(output) == 0
     return env_action
+
 
 def train_agent(
     args: argparse.Namespace = get_args(),
@@ -299,9 +339,7 @@ def train_agent(
     test_envs.seed(args.seed)
 
     # Create agent policies and optimizers
-    policy, optim, agents = get_agents(
-        args, agents, optim=optim
-    )
+    policy, optim, agents = get_agents(args, agents, optim=optim)
 
     # Set up collectors for experience gathering
     train_collector = Collector(
