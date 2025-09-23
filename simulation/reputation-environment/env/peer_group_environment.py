@@ -318,8 +318,11 @@ class PeerGroupEnvironment(ParallelEnv):
             mask["choose_project"][0] = 1  # Only 'no project' allowed
 
         # high reward is rarer
-        not_choosable_this_time = np.random.randint(
-            1, len(mask["choose_project"][4:]), np.random.randint(0, 3)
+        not_choosable_this_time = np.random.choice(
+            list(range(1, len(mask["choose_project"]))),
+            np.random.randint(0, len(mask["choose_project"])),
+            replace=False,
+            p=[1 / 12, 1 / 12, 1 / 12, 1 / 4, 1 / 4, 1 / 4],
         )
         mask["choose_project"][not_choosable_this_time] = 0
         # Peer collaboration: MultiBinary for peer group
@@ -664,11 +667,13 @@ class PeerGroupEnvironment(ParallelEnv):
             age_dist = self.agent_steps[idx] - self.max_agent_age
             rewardless_prob = sigmoid(
                 rewardless_dist,
-                midpoint=self.max_rewardless_steps * 0.25,
-                sharpness=0.25,
+                midpoint=self.max_rewardless_steps * 0.5,
+                sharpness=1 / (self.max_rewardless_steps * 0.0625),
             )
             age_prob = sigmoid(
-                age_dist, midpoint=self.max_agent_age * 0.25, sharpness=0.25
+                age_dist,
+                midpoint=self.max_agent_age * 0.5,
+                sharpness=1 / (self.max_agent_age * 0.0625),
             )
 
             termination_prob = max(rewardless_prob, age_prob)

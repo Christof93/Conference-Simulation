@@ -27,12 +27,12 @@ def convert_numpy(obj):
 env = PeerGroupEnvironment(
     max_agents=2_000,
     start_agents=100,
-    n_groups=50,
+    n_groups=20,
     max_peer_group_size=100,
     n_projects=6,
-    max_projects_per_agent=5,
+    max_projects_per_agent=3,
     max_agent_age=500,
-    max_rewardless_steps=250,
+    max_rewardless_steps=200,
 )
 # Initialize environment
 # env = PeerGroupEnvironment(

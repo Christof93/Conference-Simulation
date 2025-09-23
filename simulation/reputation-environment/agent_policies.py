@@ -223,7 +223,7 @@ def orthodox_scientist_policy(
                 "collaborate_with": collaborate_with,
                 "put_effort": slot_idx,
             }
-        else:
+        elif _mask_allowed(put_effort_mask, slot_idx):
             # use max peer_fit as proxy for fit
             max_fit = (
                 float(np.max(proj["peer_fit"])) if len(proj["peer_fit"]) > 0 else 0.0

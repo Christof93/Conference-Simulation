@@ -72,7 +72,7 @@ def run_simulation_with_policies(
         n_groups=n_groups,
         max_peer_group_size=max_peer_group_size,
         n_projects=6,
-        max_projects_per_agent=5,
+        max_projects_per_agent=4,
         max_agent_age=500,
         max_rewardless_steps=250,
     )
@@ -211,7 +211,7 @@ if __name__ == "__main__":
         n_agents=2_000,
         start_agents=100,
         max_steps=5_000,
-        n_groups=50,
+        n_groups=20,
         max_peer_group_size=100,
         policy_distribution=POLICY_CONFIGS["Balanced"],
     )
