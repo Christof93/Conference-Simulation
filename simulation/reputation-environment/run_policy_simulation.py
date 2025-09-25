@@ -3,10 +3,9 @@ Example script showing how to use the agent policies with the peer group environ
 """
 
 import json
-from pathlib import Path
 
 import numpy as np
-from agent_policies import create_mixed_policy_population, get_policy_function
+from agent_policies import (create_per_group_policy_population, get_policy_function)
 from env.peer_group_environment import PeerGroupEnvironment
 from log_simulation import SimLog
 from stats_tracker import SimulationStats
@@ -34,14 +33,19 @@ POLICY_CONFIGS = {
         "mass_producer": 1 / 3,
     },
     "Careerist Heavy": {
-        "careerist": 0.6,
-        "orthodox_scientist": 0.2,
-        "mass_producer": 0.2,
+        "careerist": 0.5,
+        "orthodox_scientist": 0.5,
+        "mass_producer": 0.0,
     },
     "Orthodox Heavy": {
-        "careerist": 0.2,
-        "orthodox_scientist": 0.6,
-        "mass_producer": 0.2,
+        "careerist": 0.5,
+        "orthodox_scientist": 0.0,
+        "mass_producer": 0.5,
+    },
+    "Mass Producer Heavy": {
+        "careerist": 0.5,
+        "orthodox_scientist": 0.0,
+        "mass_producer": 0.5,
     },
 }
 
@@ -53,7 +57,7 @@ def run_simulation_with_policies(
     n_groups: int = 8,
     max_peer_group_size: int = 40,
     policy_distribution: dict = None,
-    output_file_prefix: str = "policy_simu",
+    output_file_prefix: str = "policy_sim",
 ):
     """
     Run a simulation with different agent policies.
@@ -72,13 +76,13 @@ def run_simulation_with_policies(
         n_groups=n_groups,
         max_peer_group_size=max_peer_group_size,
         n_projects=6,
-        max_projects_per_agent=4,
+        max_projects_per_agent=8,
         max_agent_age=500,
         max_rewardless_steps=250,
     )
 
     # Create agent policy assignments
-    agent_policies = create_mixed_policy_population(n_agents, policy_distribution)
+    agent_policies = create_per_group_policy_population(n_agents, policy_distribution)
     print(
         f"Agent policy distribution: {dict(zip(*np.unique(agent_policies, return_counts=True)))}"
     )

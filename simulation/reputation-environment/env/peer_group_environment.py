@@ -40,7 +40,7 @@ class PeerGroupEnvironment(ParallelEnv):
         max_projects_per_agent: int = 6,
         max_agent_age: int = 1000,
         max_rewardless_steps: int = 50,
-        growth_rate: float = 0.02,
+        growth_rate: float = 0.04,
         render_mode: Optional[str] = None,
     ) -> None:
         self.n_agents: int = max_agents
@@ -626,6 +626,7 @@ class PeerGroupEnvironment(ParallelEnv):
                     )
                 else:
                     n_projects_in_vicinity = 0
+
                 quality = p.calculate_quality(
                     topic_area=self.area,
                     n_similar_projects=n_projects_in_vicinity,

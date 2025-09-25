@@ -9,6 +9,7 @@ instead of random sampling in the peer group environment simulation.
 3. mass_producer: Chooses projects with low effort and short completion time
 """
 
+from itertools import zip_longest
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -306,6 +307,10 @@ def mass_producer_policy(
     }
 
 
+def interleave(lists):
+    return [elem for group in zip_longest(*lists) for elem in group if elem is not None]
+
+
 def get_policy_function(policy_name: str):
     policies = {
         "careerist": careerist_policy,
@@ -339,6 +344,28 @@ def create_mixed_policy_population(
         agent_policies.append(list(policy_distribution.keys())[0])
     np.random.shuffle(agent_policies)
     return agent_policies
+
+
+def create_per_group_policy_population(
+    n_agents: int, policy_distribution: Dict[str, float] = None
+) -> List[str]:
+    if policy_distribution is None:
+        policy_distribution = {
+            "careerist": 1 / 3,
+            "orthodox_scientist": 1 / 3,
+            "mass_producer": 1 / 3,
+        }
+    total_proportion = sum(policy_distribution.values())
+    if abs(total_proportion - 1.0) > 1e-6:
+        raise ValueError(f"Policy distribution must sum to 1.0, got {total_proportion}")
+    policy_groups = []
+    for policy_name, proportion in policy_distribution.items():
+        if proportion > 0:
+            n_policy_agents = int(n_agents * proportion)
+            policy_groups.append([policy_name] * n_policy_agents)
+    while sum([len(group) for group in policy_groups]) < n_agents:
+        policy_groups[-1].append(list(policy_distribution.keys())[0])
+    return interleave(policy_groups)
 
 
 # Example usage and testing functions
@@ -396,4 +423,13 @@ def test_policies():
 
 
 if __name__ == "__main__":
-    test_policies()
+    # test_policies()
+    policies = create_per_group_policy_population(
+        100,
+        {
+            "careerist": 0.5,
+            "orthodox_scientist": 0.5,
+            "mass_producer": 0.0,
+        },
+    )
+    print(policies)

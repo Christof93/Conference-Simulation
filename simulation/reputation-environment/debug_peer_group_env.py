@@ -24,27 +24,27 @@ def convert_numpy(obj):
 
 
 # # Initialize environment
-env = PeerGroupEnvironment(
-    max_agents=2_000,
-    start_agents=100,
-    n_groups=20,
-    max_peer_group_size=100,
-    n_projects=6,
-    max_projects_per_agent=3,
-    max_agent_age=500,
-    max_rewardless_steps=200,
-)
-# Initialize environment
 # env = PeerGroupEnvironment(
-#     start_agents=10,
-#     max_agents=100,
-#     n_groups=2,
+#     max_agents=2_000,
+#     start_agents=100,
+#     n_groups=20,
 #     max_peer_group_size=100,
 #     n_projects=6,
-#     max_projects_per_agent=5,
-#     max_agent_age=500,
+#     max_projects_per_agent=10,
+#     max_agent_age=750,
 #     max_rewardless_steps=250,
 # )
+# Initialize environment
+env = PeerGroupEnvironment(
+    start_agents=10,
+    max_agents=100,
+    n_groups=2,
+    max_peer_group_size=100,
+    n_projects=6,
+    max_projects_per_agent=5,
+    max_agent_age=500,
+    max_rewardless_steps=250,
+)
 
 obs, infos = env.reset(seed=SEED)
 for i, agent in enumerate(env.possible_agents):
@@ -59,7 +59,7 @@ log = SimLog(
 )
 log.start()
 
-for step in range(2000):
+for step in range(100):
     actions = {}
     for agent in env.agents:
         actions[agent] = env.action_space(agent).sample(mask=env.action_masks[agent])
@@ -90,10 +90,10 @@ for step in range(2000):
     # print(f"{agent} reward: {json.dumps(rewards_converted, indent=2)}")
     # breakpoint()
     # Print a concise stats summary each step
-    if step > 500:
-        active_agent_1 = list(env.active_agents).index(1)
-        print(f"agent {active_agent_1}")
-        print(env.action_masks[f"agent_{active_agent_1}"])
+    # if step > 500:
+    #     active_agent_1 = list(env.active_agents).index(1)
+    #     print(f"agent {active_agent_1}")
+    #     print(env.action_masks[f"agent_{active_agent_1}"])
     # Print progress
     if step % 10 == 0:
         print(f"Step {step}: {stats.summary_line()}")

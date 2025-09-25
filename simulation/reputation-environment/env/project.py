@@ -41,6 +41,9 @@ class Project:
         # Validation and quality metrics
         self.validation_noise = 0.0
         self.quality_score = 0.0
+        self.effort_score = 0.0
+        self.novelty_score = 0.0
+        self.societal_value_score = 0.0
 
     def add_contributor(self, agent_id: int) -> bool:
         """Add an agent as a contributor to the project."""
@@ -132,6 +135,9 @@ class Project:
             "generator_project_id": self.generator_project_id,
             "validation_noise": self.validation_noise,
             "quality_score": self.quality_score,
+            "novelty_score": self.novelty_score,
+            "societal_value_score": self.societal_value_score,
+            "effort_score": self.effort_score,
         }
 
     @classmethod
@@ -161,7 +167,10 @@ class Project:
         project.generator_project_id = data.get("generator_project_id")
         project.validation_noise = data.get("validation_noise", 0.0)
         project.quality_score = data.get("quality_score", 0.0)
-        project.novelty = data.get("novelty", 0.5)
+        project.novelty = data.get("novelty", 0.0)
+        project.effort_score = data.get("effort_score", 0.0)
+        project.novelty_score = data.get("novelty_score", 0.0)
+        project.societal_value_score = data.get("societal_value_score", 0.0)
 
         return project
 
