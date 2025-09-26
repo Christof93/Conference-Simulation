@@ -73,7 +73,7 @@ class Project:
         return current_timestep >= (self.start_time + self.time_window)
 
     def calculate_quality(
-        self, topic_area: Area, n_similar_projects: int, noise_factor: float = 0.5
+        self, topic_area: Area, relative_density: int, noise_factor: float = 0.5
     ) -> float:
         """Calculate the final quality of the completed project."""
 
@@ -81,7 +81,7 @@ class Project:
         self.validation_noise = np.random.normal(1, noise_factor * (1 - self.prestige))
         # Base quality based on effort and prestige
         self.effort_score = self.calculate_effort_score(self.validation_noise)
-        self.novelty_score = self.calculate_novelty_score(n_similar_projects)
+        self.novelty_score = self.calculate_novelty_score(relative_density)
         self.societal_value_score = self.calculate_societal_value_score(topic_area)
         self.quality_score = (
             1 / 3 * self.effort_score
@@ -98,8 +98,8 @@ class Project:
             / self.required_effort
         )
 
-    def calculate_novelty_score(self, n_similar_projects):
-        return 1 / (n_similar_projects + 1)
+    def calculate_novelty_score(self, relative_density):
+        return relative_density
 
     def calculate_societal_value_score(self, topic_area: Area):
         return topic_area.value_at(*self.kene)

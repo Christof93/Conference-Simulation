@@ -10,7 +10,7 @@ instead of random sampling in the peer group environment simulation.
 """
 
 from itertools import zip_longest
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -22,6 +22,13 @@ def _as_scalar(x: Any) -> float:
         return float(x)
     except Exception:
         return 0.0
+
+
+def _unwrap_observation(obs: Dict[str, Any]) -> Dict[str, Any]:
+    # Unwrap if wrapped as { 'observation': ..., 'action_mask': ... }
+    if "project_opportunities" not in obs and "observation" in obs:
+        return obs["observation"]
+    return obs
 
 
 def _iter_project_opportunities(project_opportunities: Any):
@@ -77,54 +84,125 @@ def _mask_allowed(mask_arr: Any, idx: int) -> bool:
         return False
 
 
+def _default_choose_project_mask(
+    action_mask: Dict[str, Any], project_opportunities: Any
+) -> np.ndarray:
+    # Binary action space: index 0=None, 1=take the single offered project
+    mask = action_mask.get("choose_project")
+    if isinstance(mask, np.ndarray) and mask.size == 2:
+        return mask
+    return np.ones(2, dtype=np.int8)
+
+
+def _default_collaborate_mask(
+    action_mask: Dict[str, Any], peer_group_active: np.ndarray
+) -> np.ndarray:
+    return action_mask.get(
+        "collaborate_with", np.ones_like(peer_group_active, dtype=np.int8)
+    )
+
+
+def _default_put_effort_mask(action_mask: Dict[str, Any]) -> np.ndarray:
+    return action_mask.get("put_effort", np.ones(1, dtype=np.int8))
+
+
+def _get_single_opportunity(project_opportunities: Any):
+    # Expect exactly one new opportunity per step
+    for _, _, proj in _iter_project_opportunities(project_opportunities):
+        return proj
+    return None
+
+
+def _emergency_continue_any(running_projects: Dict[str, Any]) -> bool:
+    for proj_key, proj in running_projects.items():
+        contributors = len(proj.get("contributors", [])) or 1
+        time_left = proj.get("time_left", 0)
+        required = proj.get("required_effort", 0)
+        current = proj.get("current_effort", 0)
+        try:
+            if (time_left / contributors) < (required - current):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _select_effort_closest_deadline_under_required(
+    running_projects: Dict[str, Any], put_effort_mask: np.ndarray
+) -> int:
+    # choose the running project with smallest time_left that still needs effort
+    candidates: List[tuple] = []
+    for slot_idx, (proj_key, proj) in enumerate(
+        _iter_running_projects(running_projects), start=1
+    ):
+        time_left = proj["time_left"]
+        if time_left <= 0:
+            continue
+        if proj["current_effort"] < proj["required_effort"] and _mask_allowed(
+            put_effort_mask, slot_idx
+        ):
+            candidates.append((slot_idx, time_left))
+    if candidates:
+        candidates.sort(key=lambda x: x[1])
+        return candidates[0][0]
+    return 0
+
+
+def _select_effort_best_fit_or_threshold(
+    running_projects: Dict[str, Any],
+    put_effort_mask: np.ndarray,
+    threshold_ratio: float = 0.9,
+) -> int:
+    # If any project is above threshold, immediately work on it; else choose by best peer_fit
+    candidates: List[tuple] = []
+    for slot_idx, (proj_key, proj) in enumerate(
+        _iter_running_projects(running_projects), start=1
+    ):
+        required = proj["required_effort"]
+        threshold = required * threshold_ratio
+        if proj["current_effort"] > threshold and _mask_allowed(
+            put_effort_mask, slot_idx
+        ):
+            return slot_idx
+        if _mask_allowed(put_effort_mask, slot_idx):
+            max_fit = (
+                float(np.max(proj["peer_fit"])) if len(proj["peer_fit"]) > 0 else 0.0
+            )
+            candidates.append((slot_idx, max_fit))
+    if candidates:
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        return candidates[0][0]
+    return 0
+
+
 def careerist_policy(
     observation: Dict[str, Any],
     action_mask: Dict[str, np.ndarray],
     prestige_threshold: float = 0.5,
     **kwargs,
 ) -> Dict[str, Any]:
-    # Unwrap if wrapped as { 'observation': ..., 'action_mask': ... }
-    if "project_opportunities" not in observation and "observation" in observation:
-        observation = observation["observation"]
+    observation = _unwrap_observation(observation)
 
     project_opportunities = observation.get("project_opportunities", {})
-
     current = observation.get("running_projects", {})
-    chosen_project = None
-    for proj_key, proj in current.items():
-        if (
-            proj["time_left"] / len(proj["contributors"])
-            < proj["required_effort"] - proj["current_effort"]
-        ):
-            chosen_project = 0
-            break
-    if chosen_project is None:
-        # Choose project: highest prestige above threshold
-        valid_projects: List[tuple] = []
-        choose_project_mask = action_mask.get(
-            "choose_project",
-            np.ones(
-                len(getattr(project_opportunities, "items", lambda: [])()) + 1,
-                dtype=np.int8,
-            ),
+    if _emergency_continue_any(current):
+        chosen_project = 0
+    else:
+        choose_project_mask = _default_choose_project_mask(
+            action_mask, project_opportunities
         )
-
-        for i, proj_key, proj in _iter_project_opportunities(project_opportunities):
-            prestige = proj["prestige"]
-            if prestige >= prestige_threshold and _mask_allowed(choose_project_mask, i):
-                valid_projects.append((i, prestige))
-        chosen_project = (
-            valid_projects
-            and sorted(valid_projects, key=lambda x: x[1], reverse=True)[0][0]
-            or 0
+        opp = _get_single_opportunity(project_opportunities)
+        meets = (
+            opp is not None
+            and float(opp.get("prestige", 0.0)) >= prestige_threshold
+            and _mask_allowed(choose_project_mask, 1)
         )
+        chosen_project = 1 if meets else 0
 
     # Collaboration: active peers with above-average reputation
     peer_reputation = np.array(observation.get("peer_reputation", []), dtype=np.float32)
     peer_group_active = np.array(observation.get("peer_group", []), dtype=np.int8)
-    collaborate_mask = action_mask.get(
-        "collaborate_with", np.ones_like(peer_group_active, dtype=np.int8)
-    )
+    collaborate_mask = _default_collaborate_mask(action_mask, peer_group_active)
     avg_rep = (
         float(peer_reputation[peer_group_active == 1].mean())
         if peer_group_active.sum() > 0
@@ -137,22 +215,11 @@ def careerist_policy(
     collaborate_with = collaborate_with.astype(np.int8)
 
     # Effort: project closest to deadline still under required_effort
-    put_effort = 0
-    put_effort_mask = action_mask.get("put_effort", np.ones(1, dtype=np.int8))
+    put_effort_mask = _default_put_effort_mask(action_mask)
     running_projects = observation.get("running_projects", {})
-    candidates = []
-    for slot_idx, (proj_key, proj) in enumerate(
-        _iter_running_projects(running_projects), start=1
-    ):
-        time_left = proj["time_left"]
-        if time_left <= 0:
-            continue
-        if proj["current_effort"] < proj["required_effort"]:
-            if _mask_allowed(put_effort_mask, slot_idx):
-                candidates.append((slot_idx, time_left))
-    if candidates:
-        candidates.sort(key=lambda x: x[1])
-        put_effort = candidates[0][0]
+    put_effort = _select_effort_closest_deadline_under_required(
+        running_projects, put_effort_mask
+    )
 
     return {
         "choose_project": chosen_project,
@@ -167,72 +234,31 @@ def orthodox_scientist_policy(
     fit_threshold: float = 0.7,
     **kwargs,
 ) -> Dict[str, Any]:
-    if "project_opportunities" not in observation and "observation" in observation:
-        observation = observation["observation"]
+    observation = _unwrap_observation(observation)
 
     project_opportunities = observation.get("project_opportunities", {})
     current = observation.get("running_projects", {})
-    chosen_project = None
-    for proj_key, proj in current.items():
-        if (
-            proj["time_left"] / len(proj["contributors"])
-            < proj["required_effort"] - proj["current_effort"]
-        ):
-            chosen_project = 0
-            break
-    if chosen_project is None:
-        # Choose project: lowest novelty (best fit to existing), tie-breaker by prestige desc
-        choose_project_mask = action_mask.get(
-            "choose_project",
-            np.ones(
-                len(getattr(project_opportunities, "items", lambda: [])()) + 1,
-                dtype=np.int8,
-            ),
+    if _emergency_continue_any(current):
+        chosen_project = 0
+    else:
+        choose_project_mask = _default_choose_project_mask(
+            action_mask, project_opportunities
         )
-        ranked: List[tuple] = []
-        for i, proj_key, proj in _iter_project_opportunities(project_opportunities):
-            if _mask_allowed(choose_project_mask, i):
-                ranked.append((i, proj["novelty"], proj["prestige"]))
-        if ranked:
-            ranked.sort(key=lambda x: (x[1], -x[2]))  # min novelty, then max prestige
-            chosen_project = ranked[0][0]
-        else:
-            chosen_project = 0
+        opp = _get_single_opportunity(project_opportunities)
+        meets = opp is not None and _mask_allowed(choose_project_mask, 1)
+        chosen_project = 1 if meets else 0
 
     # Collaboration: if any running project exists, collaborate with peers whose peer_fit >= threshold
     peer_group_active = np.array(observation.get("peer_group", []), dtype=np.int8)
-    collaborate_mask = action_mask.get(
-        "collaborate_with", np.ones_like(peer_group_active, dtype=np.int8) + 1
-    )
+    collaborate_mask = _default_collaborate_mask(action_mask, peer_group_active)
     running_projects = observation.get("running_projects", {})
     collaborate_with = np.ones_like(peer_group_active, dtype=np.int8)
 
-    # Effort: best fitting active project under -10% threshold
-    put_effort = 0
-    put_effort_mask = action_mask.get("put_effort", np.ones(1, dtype=np.int8))
-    candidates = []
-    for slot_idx, (proj_key, proj) in enumerate(
-        _iter_running_projects(running_projects), start=1
-    ):
-        required = proj["required_effort"]
-        threshold = required * 0.9
-        if proj["current_effort"] > threshold and _mask_allowed(
-            put_effort_mask, slot_idx
-        ):
-            return {
-                "choose_project": chosen_project,
-                "collaborate_with": collaborate_with,
-                "put_effort": slot_idx,
-            }
-        elif _mask_allowed(put_effort_mask, slot_idx):
-            # use max peer_fit as proxy for fit
-            max_fit = (
-                float(np.max(proj["peer_fit"])) if len(proj["peer_fit"]) > 0 else 0.0
-            )
-            candidates.append((slot_idx, max_fit))
-    if candidates:
-        candidates.sort(key=lambda x: x[1], reverse=True)
-        put_effort = candidates[0][0]
+    # Effort: best fitting active project or above 90% threshold
+    put_effort_mask = _default_put_effort_mask(action_mask)
+    put_effort = _select_effort_best_fit_or_threshold(
+        running_projects, put_effort_mask, threshold_ratio=0.9
+    )
 
     return {
         "choose_project": chosen_project,
@@ -244,61 +270,37 @@ def orthodox_scientist_policy(
 def mass_producer_policy(
     observation: Dict[str, Any], action_mask: Dict[str, np.ndarray], **kwargs
 ) -> Dict[str, Any]:
-    if "project_opportunities" not in observation and "observation" in observation:
-        observation = observation["observation"]
+    observation = _unwrap_observation(observation)
 
     project_opportunities = observation.get("project_opportunities", {})
 
-    # Efficiency: prestige / (effort * time)
-    choose_project_mask = action_mask.get(
-        "choose_project",
-        np.ones(
-            len(getattr(project_opportunities, "items", lambda: [])()) + 1,
-            dtype=np.int8,
-        ),
+    # Efficiency: prestige / (effort * time). With binary space, accept if efficiency > 0 and allowed
+    choose_project_mask = _default_choose_project_mask(
+        action_mask, project_opportunities
     )
-    scores: List[tuple] = []
-    for i, proj_key, proj in _iter_project_opportunities(project_opportunities):
-        if not _mask_allowed(choose_project_mask, i):
-            continue
-        effort = proj["required_effort"]
-        time_w = proj["time_window"]
-        prestige = proj["prestige"]
+    opp = _get_single_opportunity(project_opportunities)
+    if opp is not None and _mask_allowed(choose_project_mask, 1):
+        effort = float(opp.get("required_effort", 0.0))
+        time_w = float(opp.get("time_window", 0.0))
+        prestige = float(opp.get("prestige", 0.0))
         eff = prestige / (effort * time_w) if effort > 0 and time_w > 0 else 0.0
-        scores.append((i, eff, prestige))
-    if scores:
-        scores.sort(key=lambda x: (x[1], x[2]), reverse=True)
-        chosen_project = scores[0][0]
+        chosen_project = 1 if eff > 0 else 0
     else:
         chosen_project = 0
 
     # Collaborate with all active peers within mask
     peer_group_active = np.array(observation.get("peer_group", []), dtype=np.int8)
-    collaborate_mask = action_mask.get(
-        "collaborate_with", np.ones_like(peer_group_active, dtype=np.int8)
-    )
+    collaborate_mask = _default_collaborate_mask(action_mask, peer_group_active)
     collaborate_with = ((peer_group_active > 0) & (collaborate_mask > 0)).astype(
         np.int8
     )
 
     # Effort: project closest to deadline under required_effort
-    put_effort = 0
-    put_effort_mask = action_mask.get("put_effort", np.ones(1, dtype=np.int8))
+    put_effort_mask = _default_put_effort_mask(action_mask)
     running_projects = observation.get("running_projects", {})
-    candidates = []
-    for slot_idx, (proj_key, proj) in enumerate(
-        _iter_running_projects(running_projects), start=1
-    ):
-        time_left = proj["time_left"]
-        if time_left <= 0:
-            continue
-        if proj["current_effort"] < proj["required_effort"] and _mask_allowed(
-            put_effort_mask, slot_idx
-        ):
-            candidates.append((slot_idx, time_left))
-    if candidates:
-        candidates.sort(key=lambda x: x[1])
-        put_effort = candidates[0][0]
+    put_effort = _select_effort_closest_deadline_under_required(
+        running_projects, put_effort_mask
+    )
 
     return {
         "choose_project": chosen_project,
@@ -368,68 +370,6 @@ def create_per_group_policy_population(
     return interleave(policy_groups)
 
 
-# Example usage and testing functions
-def test_policies():
-    """Test the policy functions with sample data."""
-
-    # Sample observation
-    sample_observation = {
-        "project_opportunities": [
-            {"required_effort": 10, "approx_reward": 0.1, "fit": 0.8, "time_window": 5},
-            {
-                "required_effort": 50,
-                "approx_reward": 0.5,
-                "fit": 0.6,
-                "time_window": 15,
-            },
-            {
-                "required_effort": 100,
-                "approx_reward": 1.0,
-                "fit": 0.9,
-                "time_window": 25,
-            },
-        ],
-        "peer_group": [1, 2, 3],
-        "peer_reputation": [0.7, 0.3, 0.8],
-    }
-
-    sample_action_mask = {
-        "choose_project": np.ones(4, dtype=np.int8),
-        "collaborate_with": np.ones(3, dtype=np.int8),
-        "put_effort": np.ones(7, dtype=np.int8),
-    }
-
-    print("Testing Careerist Policy:")
-    careerist_action = careerist_policy(
-        sample_observation, sample_action_mask, prestige_threshold=0.3
-    )
-    print(f"  Chosen project: {careerist_action['choose_project']}")
-    print(f"  Collaboration: {careerist_action['collaborate_with']}")
-    print(f"  Effort: {careerist_action['put_effort']}")
-
-    print("\nTesting Orthodox Scientist Policy:")
-    orthodox_action = orthodox_scientist_policy(
-        sample_observation, sample_action_mask, fit_threshold=0.7
-    )
-    print(f"  Chosen project: {orthodox_action['choose_project']}")
-    print(f"  Collaboration: {orthodox_action['collaborate_with']}")
-    print(f"  Effort: {orthodox_action['put_effort']}")
-
-    print("\nTesting Mass Producer Policy:")
-    mass_action = mass_producer_policy(sample_observation, sample_action_mask)
-    print(f"  Chosen project: {mass_action['choose_project']}")
-    print(f"  Collaboration: {mass_action['collaborate_with']}")
-    print(f"  Effort: {mass_action['put_effort']}")
-
-
 if __name__ == "__main__":
-    # test_policies()
-    policies = create_per_group_policy_population(
-        100,
-        {
-            "careerist": 0.5,
-            "orthodox_scientist": 0.5,
-            "mass_producer": 0.0,
-        },
-    )
-    print(policies)
+    # Keep minimal manual check without noisy prints
+    print(create_per_group_policy_population(10))

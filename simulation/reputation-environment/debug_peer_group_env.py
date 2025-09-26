@@ -29,7 +29,7 @@ def convert_numpy(obj):
 #     start_agents=100,
 #     n_groups=20,
 #     max_peer_group_size=100,
-#     n_projects=6,
+#     n_projects_per_step=1,
 #     max_projects_per_agent=10,
 #     max_agent_age=750,
 #     max_rewardless_steps=250,
@@ -40,7 +40,7 @@ env = PeerGroupEnvironment(
     max_agents=100,
     n_groups=2,
     max_peer_group_size=100,
-    n_projects=6,
+    n_projects_per_step=1,
     max_projects_per_agent=5,
     max_agent_age=500,
     max_rewardless_steps=250,
@@ -65,17 +65,22 @@ for step in range(100):
         actions[agent] = env.action_space(agent).sample(mask=env.action_masks[agent])
     obs, rewards, terminations, truncations, infos = env.step(actions)
     stats.update(env, obs, rewards, terminations, truncations)
+
     log.log_observation(
-        [
-            ob if env.active_agents[env.agent_to_id[a]] == 1 else None
+        {
+            a: ob if env.active_agents[env.agent_to_id[a]] == 1 else None
             for a, ob in obs.items()
-        ]
+        }
     )
     log.log_action(
-        [
-            act if env.active_agents[env.agent_to_id[a]] == 1 else None
+        {
+            a: (
+                act | {"archetype": "random"}
+                if env.active_agents[env.agent_to_id[a]] == 1
+                else None
+            )
             for a, act in actions.items()
-        ]
+        }
     )
     # for agent in env.agents:
     # obs_converted = convert_numpy(obs[agent])
@@ -90,13 +95,15 @@ for step in range(100):
     # print(f"{agent} reward: {json.dumps(rewards_converted, indent=2)}")
     # breakpoint()
     # Print a concise stats summary each step
-    # if step > 500:
-    #     active_agent_1 = list(env.active_agents).index(1)
-    #     print(f"agent {active_agent_1}")
-    #     print(env.action_masks[f"agent_{active_agent_1}"])
+    if step > 500:
+        active_agent_1 = list(env.active_agents).index(1)
+        print(f"agent {active_agent_1}")
+        print(env.action_masks[f"agent_{active_agent_1}"])
+        print(actions[f"agent_{active_agent_1}"])
+        breakpoint()
     # Print progress
     if step % 10 == 0:
         print(f"Step {step}: {stats.summary_line()}")
 
 log.log_projects(env.projects.values())
-env.area.save("log/debug_sim_actions.pickle")
+env.area.save("log/debug_sim_area.pickle")
