@@ -6,3 +6,4 @@ torch
 tianshou
 pre-commit
 neo4j
+scipy

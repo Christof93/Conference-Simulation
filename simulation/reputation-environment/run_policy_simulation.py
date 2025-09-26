@@ -5,7 +5,8 @@ Example script showing how to use the agent policies with the peer group environ
 import json
 
 import numpy as np
-from agent_policies import (create_per_group_policy_population, get_policy_function)
+from agent_policies import (create_per_group_policy_population,
+                            get_policy_function)
 from env.peer_group_environment import PeerGroupEnvironment
 from log_simulation import SimLog
 from stats_tracker import SimulationStats
@@ -75,10 +76,10 @@ def run_simulation_with_policies(
         max_agents=n_agents,
         n_groups=n_groups,
         max_peer_group_size=max_peer_group_size,
-        n_projects=6,
+        n_projects_per_step=1,
         max_projects_per_agent=8,
-        max_agent_age=500,
-        max_rewardless_steps=250,
+        max_agent_age=750,
+        max_rewardless_steps=200,
     )
 
     # Create agent policy assignments
@@ -119,20 +120,24 @@ def run_simulation_with_policies(
 
         # Step the environment
         observations, rewards, terminations, truncations, infos = env.step(actions)
-        if step > 500:
-            active_agent_1 = list(env.active_agents).index(1)
-            print(env.action_masks[f"agent_{active_agent_1}"])
+        # if step > 500:
+        #     active_agent_1 = list(env.active_agents).index(1)
+        #     print(env.action_masks[f"agent_{active_agent_1}"])
         log.log_observation(
-            [
-                obs if env.active_agents[env.agent_to_id[a]] == 1 else None
+            {
+                a: obs if env.active_agents[env.agent_to_id[a]] == 1 else None
                 for a, obs in observations.items()
-            ]
+            }
         )
         log.log_action(
-            [
-                act if env.active_agents[env.agent_to_id[a]] == 1 else None
+            {
+                a: (
+                    act | {"archetype": agent_policies[env.agent_to_id[a]]}
+                    if env.active_agents[env.agent_to_id[a]] == 1
+                    else None
+                )
                 for a, act in actions.items()
-            ]
+            }
         )
         # Update stats
         stats.update(env, observations, rewards, terminations, truncations)
@@ -212,12 +217,13 @@ if __name__ == "__main__":
     # Run a single simulation with balanced policies
     print("Running single simulation with balanced policies...")
     run_simulation_with_policies(
-        n_agents=2_000,
+        n_agents=1_200,
         start_agents=100,
-        max_steps=5_000,
+        max_steps=1_000,
         n_groups=20,
-        max_peer_group_size=100,
+        max_peer_group_size=60,
         policy_distribution=POLICY_CONFIGS["Balanced"],
+        output_file_prefix="balanced",
     )
 
     # Compare different policy distributions

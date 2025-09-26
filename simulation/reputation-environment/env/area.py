@@ -15,6 +15,19 @@ class Area:
         y = np.random.uniform(*self.ylim)
         return (x, y)
 
+    def random_gaussian_point(self):
+        x = np.tanh(
+            np.random.normal(
+                np.mean(np.array(self.xlim)), 0.3 * np.abs(self.xlim[0] - self.xlim[1])
+            )
+        )
+        y = np.tanh(
+            np.random.normal(
+                np.mean(np.array(self.ylim)), 0.3 * np.abs(self.ylim[0] - self.ylim[1])
+            )
+        )
+        return (x, y)
+
     def add_gaussian_area(self, x0, y0, sigma, value):
         """
         Define a Gaussian region centered at (x0,y0) with std=sigma and value scaling.
