@@ -5,8 +5,9 @@ Example script showing how to use the agent policies with the peer group environ
 import json
 
 import numpy as np
-from agent_policies import (create_per_group_policy_population,
-                            get_policy_function)
+from agent_policies import (create_mixed_policy_population,
+                            create_per_group_policy_population,
+                            do_nothing_policy, get_policy_function)
 from env.peer_group_environment import PeerGroupEnvironment
 from log_simulation import SimLog
 from stats_tracker import SimulationStats
@@ -59,6 +60,10 @@ def run_simulation_with_policies(
     max_peer_group_size: int = 40,
     policy_distribution: dict = None,
     output_file_prefix: str = "policy_sim",
+    group_policy_homogenous=True,
+    acceptance_threshold: float = 0.5,
+    novelty_threshold: float = 0.4,
+    prestige_threshold: float = 0.6,
 ):
     """
     Run a simulation with different agent policies.
@@ -80,23 +85,29 @@ def run_simulation_with_policies(
         max_projects_per_agent=8,
         max_agent_age=750,
         max_rewardless_steps=200,
+        acceptance_threshold=acceptance_threshold,
     )
-
-    # Create agent policy assignments
-    agent_policies = create_per_group_policy_population(n_agents, policy_distribution)
+    if group_policy_homogenous:
+        # Create agent policy assignments
+        agent_policies = create_per_group_policy_population(
+            n_agents, policy_distribution
+        )
+    else:
+        agent_policies = create_mixed_policy_population(n_agents, policy_distribution)
     print(
         f"Agent policy distribution: {dict(zip(*np.unique(agent_policies, return_counts=True)))}"
     )
 
     # Initialize stats tracker
     stats = SimulationStats()
-    log = SimLog(
-        "log",
-        f"{output_file_prefix}_actions.jsonl",
-        f"{output_file_prefix}_observations.jsonl",
-        f"{output_file_prefix}_projects.json",
-    )
-    log.start()
+    if output_file_prefix is not None:
+        log = SimLog(
+            "log",
+            f"{output_file_prefix}_actions.jsonl",
+            f"{output_file_prefix}_observations.jsonl",
+            f"{output_file_prefix}_projects.json",
+        )
+        log.start()
 
     # Reset environment
     observations, infos = env.reset(seed=42)
@@ -109,13 +120,23 @@ def run_simulation_with_policies(
         for agent in env.agents:
             agent_idx = env.agent_to_id[agent]
             policy_name = agent_policies[agent_idx]
-            policy_func = get_policy_function(policy_name)
+            if env.active_agents[agent_idx] == 0:
+                policy_func = do_nothing_policy
+                policy_name = None
+            else:
+                policy_func = get_policy_function(policy_name)
 
             # Get agent's observation and action mask
             obs = observations[agent]["observation"]
             action_mask = observations[agent]["action_mask"]
             # Generate action using the agent's policy
-            action = policy_func(obs, action_mask)
+            if policy_name == "careerist":
+                action = policy_func(obs, action_mask, prestige_threshold)
+            elif policy_name == "orthodox_scientist":
+                action = policy_func(obs, action_mask, novelty_threshold)
+            else:
+                action = policy_func(obs, action_mask)
+
             actions[agent] = action
 
         # Step the environment
@@ -123,22 +144,23 @@ def run_simulation_with_policies(
         # if step > 500:
         #     active_agent_1 = list(env.active_agents).index(1)
         #     print(env.action_masks[f"agent_{active_agent_1}"])
-        log.log_observation(
-            {
-                a: obs if env.active_agents[env.agent_to_id[a]] == 1 else None
-                for a, obs in observations.items()
-            }
-        )
-        log.log_action(
-            {
-                a: (
-                    act | {"archetype": agent_policies[env.agent_to_id[a]]}
-                    if env.active_agents[env.agent_to_id[a]] == 1
-                    else None
-                )
-                for a, act in actions.items()
-            }
-        )
+        if output_file_prefix is not None:
+            log.log_observation(
+                {
+                    a: obs if env.active_agents[env.agent_to_id[a]] == 1 else None
+                    for a, obs in observations.items()
+                }
+            )
+            log.log_action(
+                {
+                    a: (
+                        act | {"archetype": agent_policies[env.agent_to_id[a]]}
+                        if env.active_agents[env.agent_to_id[a]] == 1
+                        else None
+                    )
+                    for a, act in actions.items()
+                }
+            )
         # Update stats
         stats.update(env, observations, rewards, terminations, truncations)
 
@@ -150,9 +172,9 @@ def run_simulation_with_policies(
         if all(terminations.values()):
             print(f"Simulation ended at step {step}")
             break
-
-    log.log_projects(env.projects.values())
-    env.area.save(f"log/{output_file_prefix}_area.pickle")
+    if output_file_prefix is not None:
+        log.log_projects(env.projects.values())
+        env.area.save(f"log/{output_file_prefix}_area.pickle")
 
     # Save results
     results = {
@@ -162,8 +184,10 @@ def run_simulation_with_policies(
         or {"careerist": 1 / 3, "orthodox_scientist": 1 / 3, "mass_producer": 1 / 3},
     }
 
-    with open(output_file_prefix + "_summary.json", "w") as f:
-        json.dump(results, f, indent=2)
+    if output_file_prefix is not None:
+
+        with open(output_file_prefix + "_summary.json", "w") as f:
+            json.dump(results, f, indent=2)
 
     print(f"\nFinal Results:")
     print(f"Total Steps: {stats.total_steps}")
@@ -217,14 +241,26 @@ if __name__ == "__main__":
     # Run a single simulation with balanced policies
     print("Running single simulation with balanced policies...")
     run_simulation_with_policies(
-        n_agents=1_200,
-        start_agents=100,
-        max_steps=1_000,
+        n_agents=2_400,
+        start_agents=200,
+        max_steps=250,
         n_groups=20,
-        max_peer_group_size=60,
+        max_peer_group_size=300,
         policy_distribution=POLICY_CONFIGS["Balanced"],
         output_file_prefix="balanced",
+        group_policy_homogenous=False,
     )
+
+    # print("Running single simulation with mass producer policies...")
+    # run_simulation_with_policies(
+    #     n_agents=1_200,
+    #     start_agents=100,
+    #     max_steps=250,
+    #     n_groups=10,
+    #     max_peer_group_size=120,
+    #     policy_distribution=POLICY_CONFIGS["All Mass Producer"],
+    #     output_file_prefix="policy_all_mass_producer",
+    # )
 
     # Compare different policy distributions
     # print("\n" + "=" * 80)
