@@ -43,6 +43,7 @@ class PeerGroupEnvironment(ParallelEnv):
         max_agent_age: int = 1000,
         max_rewardless_steps: int = 50,
         growth_rate: float = 0.04,
+        acceptance_threshold: float = 0.5,
         render_mode: Optional[str] = None,
     ) -> None:
         self.n_agents: int = max_agents
@@ -54,6 +55,7 @@ class PeerGroupEnvironment(ParallelEnv):
         self.max_agent_age: int = max_agent_age
         self.max_rewardless_steps: int = max_rewardless_steps
         self.growth_rate: float = growth_rate
+        self.acceptance_threshold: float = acceptance_threshold
         self.render_mode: Optional[str] = render_mode
 
         self.possible_agents: List[str] = [f"agent_{i}" for i in range(self.n_agents)]
@@ -97,6 +99,7 @@ class PeerGroupEnvironment(ParallelEnv):
         # the ared in which the projects will be situated
         self.area: Area = None
         self.distances = []
+        self.global_density = 1
         self.project_templates: List[Dict[str, Any]] = [
             # low novelty, low effort, low prestige
             {
@@ -188,7 +191,7 @@ class PeerGroupEnvironment(ParallelEnv):
     def _generate_projects(self) -> None:
         self.open_projects = self.project_templates.copy()
         for i, project in enumerate(self.open_projects):
-            project["required_effort"] = min(
+            project["required_effort"] = max(
                 1, int(np.random.gumbel(project["required_effort"], 5))
             )
             project["prestige"] = np.clip(
@@ -245,6 +248,8 @@ class PeerGroupEnvironment(ParallelEnv):
         # activate a subset of agents equal to the starting population size
         self.active_agents[: self.starting_population_size] = 1
         self.terminated_agents = np.zeros(self.n_agents, dtype=np.int8)
+        self.distances = []
+        self.global_density = 1
 
         # Reinitialize core structures
         self._init_project_topic_plane()
@@ -314,6 +319,8 @@ class PeerGroupEnvironment(ParallelEnv):
             2,  ## if active unmask
             mask["collaborate_with"][: len(peer_group)],  # else keep 0
         )
+        if sum(mask["collaborate_with"]) == 0:
+            breakpoint()
 
         # Effort: can only put effort into active projects
         mask["put_effort"] = np.zeros(self.max_projects_per_agent + 1, dtype=np.int8)
@@ -365,27 +372,27 @@ class PeerGroupEnvironment(ParallelEnv):
                     )
                     grouped_collaborators |= set(collaborators)
 
-            new_project = []
+            # new_project = []
 
-            if running_project_idx is not None:
-                new_project = [(running_project_idx, peer_group[collaborators])]
+            # if running_project_idx is not None:
+            #     new_project = [(running_project_idx, peer_group[collaborators])]
 
-            peer_group[list(grouped_collaborators)] = -1
-            intents[list(grouped_collaborators), :] = 0
-            intents[:, list(grouped_collaborators)] = 0
+            # peer_group[list(grouped_collaborators)] = -1
+            # intents[list(grouped_collaborators), :] = 0
+            # intents[:, list(grouped_collaborators)] = 0
 
-            if (
-                np.sum(intents) <= 1
-                or np.sum(intents) < len(peer_group[peer_group >= 0])
-                or np.all(peer_group < 0)
-            ):
-                return new_project
-            else:
-                return new_project + self._find_project_setting(
-                    project_idx,
-                    peer_group,
-                    intents,
-                )
+            # if (
+            #     np.sum(intents) <= 1
+            #     or np.sum(intents) < len(peer_group[peer_group >= 0])
+            #     or np.all(peer_group < 0)
+            # ):
+            #     return new_project
+            # else:
+            #     return new_project + self._find_project_setting(
+            #         project_idx,
+            #         peer_group,
+            #         intents,
+            #     )
 
     def _start_open_project(
         self, project_idx: int, contributors: List[int]
@@ -473,7 +480,7 @@ class PeerGroupEnvironment(ParallelEnv):
             return new_kene
 
         projects_in_vicinity = np.array(all_contributors_projects)[
-            self.area.distance(all_project_kenes, new_kene) <= new_project.novelty
+            Area.distance(all_project_kenes, new_kene) <= new_project.novelty
         ]
         # no projects in vicinity
         if len(projects_in_vicinity) == 0:
@@ -553,22 +560,25 @@ class PeerGroupEnvironment(ParallelEnv):
                 action["put_effort"] > 0
                 and len(self._get_active_projects(idx)) >= action["put_effort"]
             ):
+
                 selected_project = action["put_effort"] - 1
                 effort_project_id = self.agent_active_projects[idx][selected_project]
-                effort_project = self.projects[effort_project_id]
-                contributors_idx = (
-                    list(effort_project.contributors).index(idx)
-                    if idx in effort_project.contributors
-                    else None
-                )
-                if contributors_idx is not None:
-                    effort_amount = effort_project.peer_fit[contributors_idx]
+                if effort_project_id is not None:
+                    effort_project = self.projects[effort_project_id]
+                    contributors_idx = (
+                        list(effort_project.contributors).index(idx)
+                        if idx in effort_project.contributors
+                        else None
+                    )
+                    if contributors_idx is not None:
+                        effort_amount = effort_project.peer_fit[contributors_idx]
+                    else:
+                        effort_amount = 0
+
+                    self.projects[effort_project_id].add_effort(effort_amount)
+                    self.agent_project_effort[idx][effort_project_id] += effort_amount
                 else:
-                    effort_amount = 0
-
-                self.projects[effort_project_id].add_effort(effort_amount)
-                self.agent_project_effort[idx][effort_project_id] += effort_amount
-
+                    print(f"Couldn't find project: {selected_project}")
         # Collaboration intents (for each agent, with their peers)
         for peer_group in self.peer_groups:
             peer_group = np.array((peer_group))
@@ -581,6 +591,7 @@ class PeerGroupEnvironment(ParallelEnv):
                     for gm_idx in peer_group
                 ]
             )
+
             np.fill_diagonal(peer_group_intents, 0)  # no self collaboration
 
             for choice, _ in Counter(peer_group_choices).most_common():
@@ -628,21 +639,26 @@ class PeerGroupEnvironment(ParallelEnv):
             if p.is_due(self.timestep) and p.finished is False
         ]
 
-        if len(published_projects) > 1:
-            global_density = np.mean(
+        if len(published_projects) > 1 and self.timestep % 10 == 0:
+            # sample up to 1000 projects and take the average distance to their 10 closest neighbors
+            if len(self.distances) > 1000:
+                idx = np.random.choice(self.distances.shape[0], 1000, replace=False)
+                distance_sample = self.distances[np.ix_(idx, idx)]
+            else:
+                distance_sample = self.distances
+            self.global_density = np.mean(
                 np.sum(
-                    np.sort(self.distances, axis=1)[
+                    np.sort(distance_sample, axis=1)[
                         :, 1 : min(10, len(published_projects))
                     ],
                     axis=1,
                 )
             )
-        else:
-            global_density = 1
+
         new_distances = []
         for p in due_projects:
             if len(published_projects) > 0:
-                distances = self.area.distance(
+                distances = Area.distance(
                     [pp.kene for pp in published_projects], p.kene
                 )
                 local_density = np.sum(
@@ -651,15 +667,16 @@ class PeerGroupEnvironment(ParallelEnv):
             else:
                 distances = None
                 local_density = 1
-
             quality = p.calculate_quality(
                 topic_area=self.area,
-                relative_density=sigmoid(local_density - global_density),
+                relative_density=sigmoid(local_density - self.global_density),
                 noise_factor=0.1,
             )
             quality = np.clip(quality, 0, 1)
 
-            reward = p.calculate_reward(quality, threshold=0.5, noise_factor=0)
+            reward = p.calculate_reward(
+                quality, threshold=self.acceptance_threshold, noise_factor=0.2
+            )
             if reward > 0 and distances is not None:
                 new_distances.append(distances)
             for idx in p.contributors:
@@ -676,7 +693,7 @@ class PeerGroupEnvironment(ParallelEnv):
             self._update_distances(
                 distances_to_previous=new_distances,
                 distances_between=[
-                    self.area.distance([pp.kene for pp in new_projects], p.kene)
+                    Area.distance([pp.kene for pp in new_projects], p.kene)
                     for p in new_projects
                 ],
             )
@@ -711,10 +728,11 @@ class PeerGroupEnvironment(ParallelEnv):
             age_prob = sigmoid(
                 age_dist,
                 midpoint=self.max_agent_age * 0.5,
+                # TODO: set this sharpness as parameter?
                 sharpness=1 / (self.max_agent_age * 0.0625),
             )
 
-            termination_prob = max(rewardless_prob, age_prob)
+            termination_prob = min(rewardless_prob, age_prob)
             # Stochastic decision
             terminations[a] = np.random.rand() < termination_prob
 
@@ -736,7 +754,7 @@ class PeerGroupEnvironment(ParallelEnv):
         # grow active agents
         if self.growth_rate < 1:
             if self.timestep % (1 // self.growth_rate) == 0 and np.random.rand() < 0.7:
-                # choice weighted by success?
+                # TODO: choice weighted by success?
                 group = np.random.choice(range(self.n_groups))
                 agents_activated_in_step.append(self._activate_agent(group))
         else:
@@ -775,6 +793,7 @@ class PeerGroupEnvironment(ParallelEnv):
         peer_group_obs = np.zeros(self.max_peer_group_size, dtype=np.int8)
         peer_reputation = np.zeros((self.max_peer_group_size), dtype=np.float32)
         peer_centroids = np.zeros((self.max_peer_group_size, 2), dtype=np.float64)
+        self_centroid = np.array([0, 0])
         for i, agent_i in enumerate(peer_group):
             if self.active_agents[agent_i] == 1:
                 peer_group_obs[i] = 1
@@ -791,17 +810,20 @@ class PeerGroupEnvironment(ParallelEnv):
                     ]
                 else:
                     peer_centroids[i] = centroids.mean(axis=0)
+                if agent_i == idx:
+                    self_centroid = peer_centroids[i]
 
         obs = {
             "peer_group": peer_group_obs,
             "peer_reputation": peer_reputation,
-            "peer_centroids": peer_centroids,
-            "project_opportunities": self._get_open_projects_obs(idx),
-            "running_projects": self._get_running_projects_obs(idx, peer_group),
-            "age": np.array([self.agent_steps[idx]], dtype=np.int32),
             "accumulated_rewards": np.array(
                 [self.agent_rewards[idx]], dtype=np.float32
             ),
+            "peer_centroids": np.array(peer_centroids, dtype=np.float64),
+            "self_centroid": np.array([self_centroid], dtype=np.float64),
+            "project_opportunities": self._get_open_projects_obs(idx),
+            "running_projects": self._get_running_projects_obs(idx, peer_group),
+            "age": np.array([self.agent_steps[idx]], dtype=np.int32),
         }
         return obs
 
@@ -881,8 +903,9 @@ class PeerGroupEnvironment(ParallelEnv):
                     0, 1e4, (self.max_peer_group_size,), dtype=np.float32
                 ),
                 "peer_centroids": Box(
-                    0, 1, (self.max_peer_group_size, 2), dtype=np.float64
+                    -1, 1, (self.max_peer_group_size, 2), dtype=np.float64
                 ),
+                "self_centroids": Box(-1, 1, (1, 2), dtype=np.float64),
                 "project_opportunities": GymDict(
                     {
                         f"project_{i}": GymDict(
@@ -909,8 +932,7 @@ class PeerGroupEnvironment(ParallelEnv):
                                 "time_left": Box(0, 250, (1,), dtype=np.int32),
                                 "current_effort": Box(
                                     0,
-                                    self.max_peer_group_size,
-                                    *200,
+                                    self.max_peer_group_size * 200,
                                     (1,),
                                     dtype=np.float32,
                                 ),

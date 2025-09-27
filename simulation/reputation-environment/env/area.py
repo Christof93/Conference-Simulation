@@ -34,7 +34,8 @@ class Area:
         """
         self.areas.append((x0, y0, sigma, value))
 
-    def distance(self, p1, p2):
+    @staticmethod
+    def distance(p1, p2):
         """
         Compute Euclidean distance between two points p1=(x1,y1) and p2=(x2,y2).
         """
