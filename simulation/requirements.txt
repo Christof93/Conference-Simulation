@@ -7,3 +7,4 @@ tianshou
 pre-commit
 neo4j
 scipy
+scikit-optimize
