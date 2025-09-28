@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 
 import numpy as np
 from neo4j import GraphDatabase
@@ -130,6 +131,42 @@ def get_authors_per_paper():
     pass
 
 
+def build_stats(projects):
+    contributor_times = defaultdict(list)
+    contributor_papers = defaultdict(int)
+
+    authors_per_paper = []
+    quality_scores = []
+
+    # collect info
+    for proj in projects:
+        start_time = proj.get("start_time")
+        if start_time < 100:
+            continue
+        contributors = proj.get("contributors", [])
+        authors_per_paper.append(len(contributors))
+        quality_scores.append(proj.get("quality_score"))
+
+        for c in contributors:
+            contributor_times[c].append(start_time)
+            contributor_papers[c] += 1
+
+    # compute ages
+    author_lifespan = []
+    papers_per_author = []
+    for c, times in contributor_times.items():
+        age = max(times) - min(times) if len(times) > 1 else 0
+        author_lifespan.append(age)
+        papers_per_author.append(contributor_papers[c])
+
+    return {
+        "papers_per_author": papers_per_author,
+        "authors_per_paper": authors_per_paper,
+        "lifespan": author_lifespan,
+        "quality": quality_scores,
+    }
+
+
 def save_real_world_data():
     with open("../data/target_corpus_meta_info.json", "r") as f:
         papers = json.load(f)
@@ -179,25 +216,31 @@ def main():
     # ---- Step 2–3: Define loss function ----
     def loss(theta):
         print(theta)
-        sim_run = run_simulation_with_policies(
-            n_agents=1_200,
-            start_agents=200,
-            max_steps=600,
-            n_groups=20,
-            max_peer_group_size=300,
-            policy_distribution={
-                "careerist": theta[4][0],
-                "orthodox_scientist": theta[4][1],
-                "mass_producer": theta[4][2],
-            },
-            output_file_prefix=None,
-            group_policy_homogenous=theta[3],
-            acceptance_threshold=theta[0],
-            novelty_threshold=theta[1],
-            prestige_threshold=theta[2],
-        )
-        sim_data = {}  # run_simulation(theta)  # returns synthetic dataset
+        try:
+            sim_run = run_simulation_with_policies(
+                n_agents=1_200,
+                start_agents=200,
+                max_steps=600,
+                n_groups=20,
+                max_peer_group_size=300,
+                policy_distribution={
+                    "careerist": theta[4][0],
+                    "orthodox_scientist": theta[4][1],
+                    "mass_producer": theta[4][2],
+                },
+                output_file_prefix=None,
+                group_policy_homogenous=theta[3],
+                acceptance_threshold=theta[0],
+                novelty_threshold=theta[1],
+                prestige_threshold=theta[2],
+            )
+        except Exception as e:
+            print(e)
+            return np.inf
 
+        with open("log/calibration_projects.json", "r") as f:
+            run_projects = json.load(f)
+        sim_data = build_stats(run_projects)
         # Extract histograms (same bins as real)
         H_sim1 = np.histogram(
             sim_data["papers_per_author"], bins=len(H_real_papers_per_author)
@@ -219,7 +262,7 @@ def main():
         d2 = wasserstein_distance(H_real_authors_per_paper, H_sim2)
         d3 = wasserstein_distance(H_real_lifespan, H_sim3)
         d4 = wasserstein_distance(H_real_quality, H_sim4)
-
+        print(d1, d2, d3, d4)
         return d1 + d2 + d3 + d4  # weighted sum possible
 
     res = gp_minimize(loss, param_space, n_calls=50, random_state=42)

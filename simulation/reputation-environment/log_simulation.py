@@ -15,10 +15,10 @@ class SimLog:
         self.project_path = os.path.join(logs_dir, project_path)
 
     def start(self):
-        with open(self.action_path, "w") as jf:
-            jf.write("")
-        with open(self.observation_path, "w") as jf:
-            jf.write("")
+        # Delete existing files if they exist
+        for file_path in [self.action_path, self.observation_path, self.project_path]:
+            if os.path.exists(file_path):
+                os.remove(file_path)
 
     def log_action(self, action: Dict):
         # Append JSONL row

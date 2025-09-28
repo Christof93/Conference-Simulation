@@ -59,7 +59,7 @@ def run_simulation_with_policies(
     n_groups: int = 8,
     max_peer_group_size: int = 40,
     policy_distribution: dict = None,
-    output_file_prefix: str = "policy_sim",
+    output_file_prefix: str = None,
     group_policy_homogenous=True,
     acceptance_threshold: float = 0.5,
     novelty_threshold: float = 0.4,
@@ -100,14 +100,14 @@ def run_simulation_with_policies(
 
     # Initialize stats tracker
     stats = SimulationStats()
-    if output_file_prefix is not None:
+    if output_file_prefix is None:
         log = SimLog(
             "log",
-            f"{output_file_prefix}_actions.jsonl",
-            f"{output_file_prefix}_observations.jsonl",
-            f"{output_file_prefix}_projects.json",
+            f"calibration_actions.jsonl",
+            f"calibration_observations.jsonl",
+            f"calibration_projects.json",
         )
-        log.start()
+    log.start()
 
     # Reset environment
     observations, infos = env.reset(seed=42)
@@ -173,9 +173,9 @@ def run_simulation_with_policies(
             print(f"Simulation ended at step {step}")
             break
     if output_file_prefix is not None:
-        log.log_projects(env.projects.values())
         env.area.save(f"log/{output_file_prefix}_area.pickle")
 
+    log.log_projects(env.projects.values())
     # Save results
     results = {
         "final_stats": stats.to_dict(),
