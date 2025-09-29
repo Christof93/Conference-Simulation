@@ -5,7 +5,7 @@ import numpy as np
 from neo4j import GraphDatabase
 from run_policy_simulation import run_simulation_with_policies
 from SALib.analyze import sobol
-from SALib.sample import saltelli
+from SALib.sample import sobol
 from scipy.stats import wasserstein_distance
 # from some_simulator import run_simulation  # your simulator function
 from skopt import gp_minimize  # Bayesian optimization
@@ -224,7 +224,7 @@ def generate_proportions(step=0.1):
 
 def sensitivity_analysis(problem):
     # --- Step 2: Sample parameter combinations ---
-    param_values = saltelli.sample(problem, 256, calc_second_order=False)
+    param_values = sobol.sample(problem, 64, calc_second_order=False)
 
     # --- Step 3: Run simulation and collect outputs ---
     def run_model(params):
@@ -414,14 +414,14 @@ def main():
     real_data["quality"] = real_data["quality"] / real_data["quality"].sum()
     real_data["acceptance"] = real_data["acceptance"].mean()
     sensitivity_analysis(problem)
-    real_data = {
-        "papers_per_author": np.load("papers_per_author.npy"),
-        "authors_per_paper": np.load("authors_per_paper.npy"),
-        "lifespan": np.load("author_lifespan.npy"),
-        "quality": np.load("quality_histogram.npy"),
-        "acceptance": np.load("acceptance_histogram.npy"),
-    }
-    calibrate(problem, real_data)
+    # real_data = {
+    #     "papers_per_author": np.load("papers_per_author.npy"),
+    #     "authors_per_paper": np.load("authors_per_paper.npy"),
+    #     "lifespan": np.load("author_lifespan.npy"),
+    #     "quality": np.load("quality_histogram.npy"),
+    #     "acceptance": np.load("acceptance_histogram.npy"),
+    # }
+    # calibrate(problem, real_data)
 
 
 if __name__ == "__main__":
