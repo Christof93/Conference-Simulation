@@ -4,6 +4,8 @@ from collections import defaultdict
 import numpy as np
 from neo4j import GraphDatabase
 from run_policy_simulation import run_simulation_with_policies
+from SALib.analyze import sobol
+from SALib.sample import saltelli
 from scipy.stats import wasserstein_distance
 # from some_simulator import run_simulation  # your simulator function
 from skopt import gp_minimize  # Bayesian optimization
@@ -89,6 +91,30 @@ def get_review_scores_or(
     return scores
 
 
+def get_acceptance_rates_or(
+    confs=[
+        "ICLR.cc_2018",
+        "ICLR.cc_2020",
+        "ICLR.cc_2021",
+        "ICLR.cc_2022",
+        "ICLR.cc_2023",
+    ]
+):
+    score_query = """
+        MATCH (p:Paper)-[:_IS_SUBMITTED_TO]->(c:Conference {{id: "{0}"}})
+        WITH p.accepted AS accepted
+        RETURN accepted
+    """
+    scores = []
+    with driver.session(database="open-review-data") as session:
+        for conf in confs:
+            results = session.run(score_query.format(conf))
+            for record in results:
+                if record["accepted"] is not None:
+                    scores.append(record["accepted"])
+    return scores
+
+
 def get_authors_per_paper_openalex(papers):
     counts = []
     for paper in papers:
@@ -137,6 +163,7 @@ def build_stats(projects):
 
     authors_per_paper = []
     quality_scores = []
+    acceptances = []
 
     # collect info
     for proj in projects:
@@ -146,7 +173,7 @@ def build_stats(projects):
         contributors = proj.get("contributors", [])
         authors_per_paper.append(len(contributors))
         quality_scores.append(proj.get("quality_score"))
-
+        acceptances.append((1 if proj.get("final_reward") > 0 else 0))
         for c in contributors:
             contributor_times[c].append(start_time)
             contributor_papers[c] += 1
@@ -164,6 +191,7 @@ def build_stats(projects):
         "authors_per_paper": authors_per_paper,
         "lifespan": author_lifespan,
         "quality": quality_scores,
+        "acceptance": acceptances,
     }
 
 
@@ -179,7 +207,8 @@ def save_real_world_data():
     np.save("author_lifespan.npy", np.array(get_author_lifespans_openalex(authors)))
     np.save("papers_per_author.npy", np.array(get_papers_per_author_openalex(authors)))
     np.save("authors_per_paper.npy", np.array(get_authors_per_paper_openalex(papers)))
-    np.save("quality_histogram.npy", np.array(get_review_scores_or()))
+    np.save("acceptance.npy", np.array(get_review_scores_or()))
+    np.save("quality.npy", np.array(get_acceptance_rates_or()))
 
 
 def generate_proportions(step=0.1):
@@ -193,24 +222,96 @@ def generate_proportions(step=0.1):
     return proportions
 
 
-def main():
-    # ---- Step 1: Load real-world histograms ----
-    H_real_papers_per_author = np.load("papers_per_author.npy")
-    H_real_authors_per_paper = np.load("authors_per_paper.npy")
-    H_real_lifespan = np.load("author_lifespan.npy")
-    H_real_quality = np.load("quality_histogram.npy")
-    # ---- Step 4: Optimize ----
+def sensitivity_analysis(problem):
+    # --- Step 2: Sample parameter combinations ---
+    param_values = saltelli.sample(problem, 256, calc_second_order=False)
+
+    # --- Step 3: Run simulation and collect outputs ---
+    def run_model(params):
+        acceptance, novelty, prestige, effort, rewardless, group_align = params
+        sim_run = run_simulation_with_policies(
+            n_agents=400,
+            start_agents=100,
+            max_steps=400,
+            n_groups=10,
+            max_peer_group_size=100,
+            max_rewardless_steps=rewardless,
+            policy_distribution={
+                "careerist": 1 / 3,
+                "orthodox_scientist": 1 / 3,
+                "mass_producer": 1 / 3,
+            },
+            output_file_prefix=None,
+            group_policy_homogenous=group_align,
+            acceptance_threshold=acceptance,
+            novelty_threshold=novelty,
+            prestige_threshold=prestige,
+            effort_threshold=effort,
+        )
+
+        with open("log/calibration_projects.json", "r") as f:
+            run_projects = json.load(f)
+        sim_data = build_stats(run_projects)
+
+        # Outputs for sensitivity
+        return [
+            float(np.mean(sim_data["papers_per_author"])),
+            float(np.mean(sim_data["authors_per_paper"])),
+            float(np.mean(sim_data["lifespan"])),
+            float(np.mean(sim_data["quality"])),
+            float(np.mean(sim_data["acceptance"])),
+        ]
+
+    Y = []
+    for i, p in param_values:
+        print(f"Sensitivity Analysis run {i+1}/{len(param_values)}")
+        Y.append(run_model(p))
+    Y = np.array(Y)
+    # --- Step 4: Sobol sensitivity analysis + Save results ---
+    output_names = [
+        "papers_per_author",
+        "authors_per_paper",
+        "lifespan",
+        "quality",
+        "acceptance",
+    ]
+
+    for i, output_name in enumerate(output_names):
+        Si = sobol.analyze(problem, Y[:, i], calc_second_order=False)
+        results = {
+            "S1": dict(zip(problem["names"], Si["S1"].tolist())),
+            "ST": dict(zip(problem["names"], Si["ST"].tolist())),
+        }
+        out_file = f"sensitivity_{output_name}.json"
+        with open(out_file, "w") as f:
+            json.dump(results, f, indent=2)
+        print(f"Saved sensitivity results for {output_name} → {out_file}")
+
+
+def calibrate(problem, real_data):
+    H_real_papers_per_author = real_data["papers_per_author"]
+    H_real_authors_per_paper = real_data["authors_per_paper"]
+    H_real_lifespan = real_data["lifespan"]
+    H_real_quality = real_data["quality"]
+    real_acceptance_rate = real_data["acceptance"].mean()
+
     # Bounds: adjust for your parameter ranges
-    np.random.seed(42)
-    grid_props = generate_proportions(step=0.2)
-    rand_props = np.random.dirichlet([1, 1, 1], size=20).tolist()
-    candidates = [tuple(prop) for prop in grid_props + rand_props]
+    # np.random.seed(42)
+    # grid_props = generate_proportions(step=0.2)
+    # rand_props = np.random.dirichlet([1, 1, 1], size=20).tolist()
+    # candidates = [tuple(prop) for prop in rand_props + grid_props]
+    # np.random.shuffle(candidates)
+    # print(candidates)
+    names = problem["names"]
+    bounds = problem["bounds"]
     param_space = [
-        Real(0.1, 0.9, name="acceptance_threshold"),
-        Real(0.1, 0.9, name="orthodox_novelty_threshold"),
-        Real(0.1, 0.9, name="careerist_prestige_threshold"),
-        Categorical([True, False], name="policy_aligned_in_group"),  # Boolean
-        Categorical(candidates, name="policy_population_proportions"),
+        Real(*bounds[0], name=names[0]),
+        Real(*bounds[1], name=names[1]),
+        Real(*bounds[2], name=names[2]),
+        Integer(*bounds[3], name=names[3]),
+        Integer(*bounds[4], name=names[4]),
+        Categorical(*bounds[5], name=names[5]),  # Boolean
+        # Categorical(candidates, name="policy_population_proportions"),
     ]
 
     # ---- Step 2–3: Define loss function ----
@@ -221,22 +322,27 @@ def main():
                 n_agents=1_200,
                 start_agents=200,
                 max_steps=600,
+                # max_steps=10,
                 n_groups=20,
                 max_peer_group_size=300,
+                max_rewardless_steps=theta[names.index("max_rewardless_steps")],
                 policy_distribution={
-                    "careerist": theta[4][0],
-                    "orthodox_scientist": theta[4][1],
-                    "mass_producer": theta[4][2],
+                    "careerist": 1 / 3,  # theta[4][0],
+                    "orthodox_scientist": 1 / 3,  # theta[4][1],
+                    "mass_producer": 1 / 3,  # theta[4][2],
                 },
                 output_file_prefix=None,
-                group_policy_homogenous=theta[3],
-                acceptance_threshold=theta[0],
-                novelty_threshold=theta[1],
-                prestige_threshold=theta[2],
+                group_policy_homogenous=bool(
+                    theta[names.index("policy_aligned_in_group")]
+                ),
+                acceptance_threshold=theta[names.index("acceptance_threshold")],
+                novelty_threshold=theta[names.index("orthodox_novelty_threshold")],
+                prestige_threshold=theta[names.index("careerist_prestige_threshold")],
+                effort_threshold=theta[names.index("mass_producer_effort_threshold")],
             )
         except Exception as e:
             print(e)
-            return np.inf
+            return 1e6
 
         with open("log/calibration_projects.json", "r") as f:
             run_projects = json.load(f)
@@ -250,23 +356,72 @@ def main():
         )[0]
         H_sim3 = np.histogram(sim_data["lifespan"], bins=len(H_real_lifespan))[0]
         H_sim4 = np.histogram(sim_data["quality"], bins=len(H_real_quality))[0]
-
         # Normalize
         H_sim1 = H_sim1 / H_sim1.sum()
         H_sim2 = H_sim2 / H_sim2.sum()
         H_sim3 = H_sim3 / H_sim3.sum()
         H_sim4 = H_sim4 / H_sim4.sum()
+        sim_acceptance_rate = sim_data["acceptance"].mean()
 
         # Distances
         d1 = wasserstein_distance(H_real_papers_per_author, H_sim1)
         d2 = wasserstein_distance(H_real_authors_per_paper, H_sim2)
         d3 = wasserstein_distance(H_real_lifespan, H_sim3)
         d4 = wasserstein_distance(H_real_quality, H_sim4)
-        print(d1, d2, d3, d4)
-        return d1 + d2 + d3 + d4  # weighted sum possible
+        d5 = np.abs(real_acceptance_rate - sim_acceptance_rate)
+        print(d1, d2, d3, d4, d5)
+        return d1 + d2 + d3 + d4 + d5  # weighted sum possible
 
     res = gp_minimize(loss, param_space, n_calls=50, random_state=42)
     print("Best parameters:", res.x)
+
+
+def main():
+    problem = {
+        "num_vars": 6,
+        "names": [
+            "acceptance_threshold",
+            "orthodox_novelty_threshold",
+            "careerist_prestige_threshold",
+            "mass_producer_effort_threshold",
+            "max_rewardless_steps",
+            "policy_aligned_in_group",
+        ],
+        "bounds": [
+            [0.2, 0.8],  # Real
+            [0.2, 0.8],  # Real
+            [0.2, 0.8],  # Real
+            [10, 50],  # Integer (approx. continuous for SA)
+            [50, 500],  # Integer
+            [0, 1],  # Boolean → treat as 0/1
+        ],
+    }
+    real_data = {
+        "papers_per_author": np.histogram(np.load("papers_per_author.npy"), 200),
+        "authors_per_paper": np.histogram(np.load("authors_per_paper.npy"), 200),
+        "lifespan": np.histogram(np.load("author_lifespan.npy"), 200),
+        "quality": np.histogram(np.load("quality_histogram.npy"), 10),
+        "acceptance": np.load("acceptance_histogram.npy"),
+    }
+    # Normalize real data histograms
+    real_data["papers_per_author"] = (
+        real_data["papers_per_author"] / real_data["papers_per_author"].sum()
+    )
+    real_data["authors_per_paper"] = (
+        real_data["authors_per_paper"] / real_data["authors_per_paper"].sum()
+    )
+    real_data["lifespan"] = real_data["lifespan"] / real_data["lifespan"].sum()
+    real_data["quality"] = real_data["quality"] / real_data["quality"].sum()
+    real_data["acceptance"] = real_data["acceptance"].mean()
+    sensitivity_analysis(problem)
+    real_data = {
+        "papers_per_author": np.load("papers_per_author.npy"),
+        "authors_per_paper": np.load("authors_per_paper.npy"),
+        "lifespan": np.load("author_lifespan.npy"),
+        "quality": np.load("quality_histogram.npy"),
+        "acceptance": np.load("acceptance_histogram.npy"),
+    }
+    calibrate(problem, real_data)
 
 
 if __name__ == "__main__":

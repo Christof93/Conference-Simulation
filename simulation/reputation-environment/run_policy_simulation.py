@@ -55,6 +55,7 @@ POLICY_CONFIGS = {
 def run_simulation_with_policies(
     n_agents: int = 100,
     max_steps: int = 1_000,
+    max_rewardless_steps: int = 250,
     start_agents: int = 60,
     n_groups: int = 8,
     max_peer_group_size: int = 40,
@@ -64,6 +65,7 @@ def run_simulation_with_policies(
     acceptance_threshold: float = 0.5,
     novelty_threshold: float = 0.4,
     prestige_threshold: float = 0.6,
+    effort_threshold: int = 22,
 ):
     """
     Run a simulation with different agent policies.
@@ -84,7 +86,7 @@ def run_simulation_with_policies(
         n_projects_per_step=1,
         max_projects_per_agent=8,
         max_agent_age=750,
-        max_rewardless_steps=200,
+        max_rewardless_steps=max_rewardless_steps,
         acceptance_threshold=acceptance_threshold,
     )
     if group_policy_homogenous:
@@ -134,6 +136,8 @@ def run_simulation_with_policies(
                 action = policy_func(obs, action_mask, prestige_threshold)
             elif policy_name == "orthodox_scientist":
                 action = policy_func(obs, action_mask, novelty_threshold)
+            elif policy_name == "mass_producer":
+                action = policy_func(obs, action_mask, effort_threshold)
             else:
                 action = policy_func(obs, action_mask)
 
@@ -165,7 +169,7 @@ def run_simulation_with_policies(
         stats.update(env, observations, rewards, terminations, truncations)
 
         # Print progress
-        if step % 10 == 0:
+        if step % 100 == 0:
             print(f"Step {step}: {stats.summary_line()}")
 
         # Check if all agents are done

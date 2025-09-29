@@ -8,3 +8,4 @@ pre-commit
 neo4j
 scipy
 scikit-optimize
+SALib

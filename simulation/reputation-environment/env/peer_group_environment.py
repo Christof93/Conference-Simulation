@@ -103,7 +103,7 @@ class PeerGroupEnvironment(ParallelEnv):
         self.project_templates: List[Dict[str, Any]] = [
             # low novelty, low effort, low prestige
             {
-                "required_effort": 10,
+                "required_effort": 20,
                 "prestige": 0.5,
                 "novelty": 0.2,
             },
@@ -192,7 +192,7 @@ class PeerGroupEnvironment(ParallelEnv):
         self.open_projects = self.project_templates.copy()
         for i, project in enumerate(self.open_projects):
             project["required_effort"] = max(
-                1, int(np.random.gumbel(project["required_effort"], 5))
+                1, int(np.random.gumbel(project["required_effort"], 10))
             )
             project["prestige"] = np.clip(
                 np.random.normal(project["prestige"], 0.15), 0.1, 1
@@ -766,10 +766,10 @@ class PeerGroupEnvironment(ParallelEnv):
                 group = np.random.choice(range(self.n_groups))
                 agents_activated_in_step.append(self._activate_agent(group))
 
-        if len(agents_activated_in_step) > 0:
-            print(
-                f"Activated {len(agents_activated_in_step)} agents in step {self.timestep}"
-            )
+        # if len(agents_activated_in_step) > 0:
+        #     print(
+        #         f"Activated {len(agents_activated_in_step)} agents in step {self.timestep}"
+        #     )
 
         if not all([a is not None for a in agents_activated_in_step]):
             print("No more agents to activate!")
