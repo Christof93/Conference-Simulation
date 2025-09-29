@@ -263,7 +263,7 @@ def sensitivity_analysis(problem):
         ]
 
     Y = []
-    for i, p in param_values:
+    for i, p in enumerate(param_values):
         print(f"Sensitivity Analysis run {i+1}/{len(param_values)}")
         Y.append(run_model(p))
     Y = np.array(Y)
@@ -397,10 +397,10 @@ def main():
         ],
     }
     real_data = {
-        "papers_per_author": np.histogram(np.load("papers_per_author.npy"), 200),
-        "authors_per_paper": np.histogram(np.load("authors_per_paper.npy"), 200),
-        "lifespan": np.histogram(np.load("author_lifespan.npy"), 200),
-        "quality": np.histogram(np.load("quality_histogram.npy"), 10),
+        "papers_per_author": np.histogram(np.load("papers_per_author.npy"), 200)[0],
+        "authors_per_paper": np.histogram(np.load("authors_per_paper.npy"), 200)[0],
+        "lifespan": np.histogram(np.load("author_lifespan.npy"), 200)[0],
+        "quality": np.histogram(np.load("quality_histogram.npy"), 10)[0],
         "acceptance": np.load("acceptance_histogram.npy"),
     }
     # Normalize real data histograms
