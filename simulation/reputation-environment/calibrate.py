@@ -310,7 +310,7 @@ def calibrate(problem, real_data):
         Real(*bounds[2], name=names[2]),
         Integer(*bounds[3], name=names[3]),
         Integer(*bounds[4], name=names[4]),
-        Categorical(*bounds[5], name=names[5]),  # Boolean
+        Categorical(bounds[5], name=names[5]),  # Boolean
         # Categorical(candidates, name="policy_population_proportions"),
     ]
 
@@ -414,14 +414,14 @@ def main():
     real_data["quality"] = real_data["quality"] / real_data["quality"].sum()
     real_data["acceptance"] = real_data["acceptance"].mean()
     sensitivity_analysis(problem)
-    # real_data = {
-    #     "papers_per_author": np.load("papers_per_author.npy"),
-    #     "authors_per_paper": np.load("authors_per_paper.npy"),
-    #     "lifespan": np.load("author_lifespan.npy"),
-    #     "quality": np.load("quality_histogram.npy"),
-    #     "acceptance": np.load("acceptance_histogram.npy"),
-    # }
-    # calibrate(problem, real_data)
+    real_data = {
+        "papers_per_author": np.load("papers_per_author.npy"),
+        "authors_per_paper": np.load("authors_per_paper.npy"),
+        "lifespan": np.load("author_lifespan.npy"),
+        "quality": np.load("quality_histogram.npy"),
+        "acceptance": np.load("acceptance_histogram.npy"),
+    }
+    calibrate(problem, real_data)
 
 
 if __name__ == "__main__":
