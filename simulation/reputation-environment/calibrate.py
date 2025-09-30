@@ -265,7 +265,9 @@ def sensitivity_analysis(problem):
     Y = []
     for i, p in enumerate(param_values):
         print(f"Sensitivity Analysis run {i+1}/{len(param_values)}")
-        Y.append(run_model(p))
+        outputs = run_model(p)
+        if not np.isnan(outputs).any():
+            Y.append(outputs)
     Y = np.array(Y)
     # --- Step 4: Sobol sensitivity analysis + Save results ---
     output_names = [
@@ -361,7 +363,7 @@ def calibrate(problem, real_data):
         H_sim2 = H_sim2 / H_sim2.sum()
         H_sim3 = H_sim3 / H_sim3.sum()
         H_sim4 = H_sim4 / H_sim4.sum()
-        sim_acceptance_rate = sim_data["acceptance"].mean()
+        sim_acceptance_rate = np.array(sim_data["acceptance"]).mean()
 
         # Distances
         d1 = wasserstein_distance(H_real_papers_per_author, H_sim1)
@@ -413,7 +415,7 @@ def main():
     real_data["lifespan"] = real_data["lifespan"] / real_data["lifespan"].sum()
     real_data["quality"] = real_data["quality"] / real_data["quality"].sum()
     real_data["acceptance"] = real_data["acceptance"].mean()
-    sensitivity_analysis(problem)
+    # sensitivity_analysis(problem)
     real_data = {
         "papers_per_author": np.load("papers_per_author.npy"),
         "authors_per_paper": np.load("authors_per_paper.npy"),
