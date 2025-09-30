@@ -4,8 +4,8 @@ from collections import defaultdict
 import numpy as np
 from neo4j import GraphDatabase
 from run_policy_simulation import run_simulation_with_policies
-from SALib.analyze import sobol
-from SALib.sample import sobol
+from SALib.analyze import sobol as sobol_analyze
+from SALib.sample import sobol as sobol_sample
 from scipy.stats import wasserstein_distance
 # from some_simulator import run_simulation  # your simulator function
 from skopt import gp_minimize  # Bayesian optimization
@@ -224,7 +224,7 @@ def generate_proportions(step=0.1):
 
 def sensitivity_analysis(problem):
     # --- Step 2: Sample parameter combinations ---
-    param_values = sobol.sample(problem, 64, calc_second_order=False)
+    param_values = sobol_sample.sample(problem, 64, calc_second_order=False)
 
     # --- Step 3: Run simulation and collect outputs ---
     def run_model(params):
@@ -279,7 +279,7 @@ def sensitivity_analysis(problem):
     ]
 
     for i, output_name in enumerate(output_names):
-        Si = sobol.analyze(problem, Y[:, i], calc_second_order=False)
+        Si = sobol_analyze.analyze(problem, Y[:, i], calc_second_order=False)
         results = {
             "S1": dict(zip(problem["names"], Si["S1"].tolist())),
             "ST": dict(zip(problem["names"], Si["ST"].tolist())),

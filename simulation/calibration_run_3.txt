@@ -1,0 +1,910 @@
+[0.6779257921161399, 0.31006087391969833, 0.6678146001636618, np.int64(34), np.int64(251), 0]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=241 | success=127/241 (52.7%) | effort(total=5656.35,/step=56.00,/fin_proj=10.34) | rewards(total=146.19,/step=1.45) | open=1 active=274
+Step 200: t=201 | finished=818 | success=427/818 (52.2%) | effort(total=13322.91,/step=66.28,/fin_proj=13.38) | rewards(total=423.51,/step=2.11) | open=1 active=320
+Step 300: t=301 | finished=1457 | success=731/1457 (50.2%) | effort(total=21185.18,/step=70.38,/fin_proj=12.92) | rewards(total=655.96,/step=2.18) | open=1 active=346
+Step 400: t=401 | finished=2164 | success=1068/2164 (49.4%) | effort(total=29061.73,/step=72.47,/fin_proj=12.56) | rewards(total=891.82,/step=2.22) | open=1 active=357
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Step 500: t=501 | finished=2864 | success=1387/2864 (48.4%) | effort(total=37070.35,/step=73.99,/fin_proj=12.38) | rewards(total=1090.97,/step=2.18) | open=1 active=365
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3558
+Successful Projects: 1695
+Success Rate: 0.476
+Total Rewards: 1305.78
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.016478439574007242
+[0.4755493351795204, 0.4002251666834132, 0.2857200907531645, np.int64(36), np.int64(75), 1]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=291 | success=227/291 (78.0%) | effort(total=8305.84,/step=82.24,/fin_proj=13.44) | rewards(total=228.12,/step=2.26) | open=1 active=381
+Step 200: t=201 | finished=1136 | success=848/1136 (74.6%) | effort(total=19835.84,/step=98.69,/fin_proj=14.43) | rewards(total=619.62,/step=3.08) | open=1 active=513
+Step 300: t=301 | finished=2148 | success=1542/2148 (71.8%) | effort(total=31865.73,/step=105.87,/fin_proj=13.28) | rewards(total=958.95,/step=3.19) | open=1 active=516
+Step 400: t=401 | finished=3175 | success=2202/3175 (69.4%) | effort(total=43807.20,/step=109.24,/fin_proj=12.91) | rewards(total=1286.59,/step=3.21) | open=1 active=517
+Step 500: t=501 | finished=4175 | success=2848/4175 (68.2%) | effort(total=55880.49,/step=111.54,/fin_proj=12.70) | rewards(total=1609.42,/step=3.21) | open=1 active=522
+
+Final Results:
+Total Steps: 600
+Finished Projects: 5164
+Successful Projects: 3448
+Success Rate: 0.668
+Total Rewards: 1900.47
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.1902399053422028
+[0.7631316254094502, 0.2004672595046086, 0.7953269355747308, np.int64(35), np.int64(325), 0]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=222 | success=107/222 (48.2%) | effort(total=5440.53,/step=53.87,/fin_proj=10.48) | rewards(total=119.73,/step=1.19) | open=1 active=222
+Step 200: t=201 | finished=671 | success=375/671 (55.9%) | effort(total=13150.05,/step=65.42,/fin_proj=15.77) | rewards(total=403.50,/step=2.01) | open=1 active=253
+Step 300: t=301 | finished=1162 | success=650/1162 (55.9%) | effort(total=20911.83,/step=69.47,/fin_proj=16.13) | rewards(total=658.27,/step=2.19) | open=1 active=252
+Step 400: t=401 | finished=1661 | success=902/1661 (54.3%) | effort(total=28414.75,/step=70.86,/fin_proj=15.88) | rewards(total=876.72,/step=2.19) | open=1 active=261
+Step 500: t=501 | finished=2186 | success=1161/2186 (53.1%) | effort(total=36248.91,/step=72.35,/fin_proj=15.73) | rewards(total=1107.62,/step=2.21) | open=1 active=270
+
+Final Results:
+Total Steps: 600
+Finished Projects: 2725
+Successful Projects: 1406
+Success Rate: 0.516
+Total Rewards: 1337.80
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.06167725623890935
+[0.21383745502484947, 0.5148647961550337, 0.4399165830291534, np.int64(12), np.int64(488), 0]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=9
+Step 100: t=101 | finished=41 | success=40/41 (97.6%) | effort(total=2472.20,/step=24.48,/fin_proj=26.88) | rewards(total=21.12,/step=0.21) | open=1 active=47
+Step 200: t=201 | finished=135 | success=131/135 (97.0%) | effort(total=5272.92,/step=26.23,/fin_proj=29.07) | rewards(total=60.02,/step=0.30) | open=1 active=51
+Step 300: t=301 | finished=239 | success=234/239 (97.9%) | effort(total=7937.06,/step=26.37,/fin_proj=29.44) | rewards(total=101.96,/step=0.34) | open=1 active=53
+Step 400: t=401 | finished=338 | success=326/338 (96.4%) | effort(total=10665.29,/step=26.60,/fin_proj=29.63) | rewards(total=140.54,/step=0.35) | open=1 active=49
+Step 500: t=501 | finished=428 | success=416/428 (97.2%) | effort(total=13783.17,/step=27.51,/fin_proj=29.73) | rewards(total=177.50,/step=0.35) | open=1 active=52
+
+Final Results:
+Total Steps: 600
+Finished Projects: 526
+Successful Projects: 508
+Success Rate: 0.966
+Total Rewards: 211.60
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.46746842668660105
+[0.2543638607196925, 0.5710316055998526, 0.4294771947602978, np.int64(49), np.int64(260), 1]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=264 | success=246/264 (93.2%) | effort(total=5599.11,/step=55.44,/fin_proj=9.42) | rewards(total=226.89,/step=2.25) | open=1 active=320
+Step 200: t=201 | finished=924 | success=861/924 (93.2%) | effort(total=13452.34,/step=66.93,/fin_proj=11.85) | rewards(total=625.10,/step=3.11) | open=1 active=369
+Step 300: t=301 | finished=1684 | success=1574/1684 (93.5%) | effort(total=21556.69,/step=71.62,/fin_proj=11.53) | rewards(total=1035.82,/step=3.44) | open=1 active=395
+Step 400: t=401 | finished=2481 | success=2296/2481 (92.5%) | effort(total=29559.17,/step=73.71,/fin_proj=11.18) | rewards(total=1438.95,/step=3.59) | open=1 active=430
+Step 500: t=501 | finished=3303 | success=3037/3303 (91.9%) | effort(total=38058.15,/step=75.96,/fin_proj=10.88) | rewards(total=1820.50,/step=3.63) | open=1 active=441
+
+Final Results:
+Total Steps: 600
+Finished Projects: 4145
+Successful Projects: 3797
+Success Rate: 0.916
+Total Rewards: 2207.64
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.4178375458820187
+[0.6081845231526679, 0.4702995511817259, 0.20795897669591992, np.int64(48), np.int64(303), 0]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=288 | success=183/288 (63.5%) | effort(total=8573.98,/step=84.89,/fin_proj=13.61) | rewards(total=210.71,/step=2.09) | open=1 active=392
+Step 200: t=201 | finished=1131 | success=695/1131 (61.5%) | effort(total=20402.51,/step=101.51,/fin_proj=14.64) | rewards(total=562.81,/step=2.80) | open=1 active=483
+Step 300: t=301 | finished=2085 | success=1201/2085 (57.6%) | effort(total=32246.28,/step=107.13,/fin_proj=13.88) | rewards(total=850.45,/step=2.83) | open=1 active=492
+Step 400: t=401 | finished=3042 | success=1706/3042 (56.1%) | effort(total=44040.13,/step=109.83,/fin_proj=13.58) | rewards(total=1126.56,/step=2.81) | open=1 active=502
+Step 500: t=501 | finished=4026 | success=2175/4026 (54.0%) | effort(total=56179.28,/step=112.13,/fin_proj=13.20) | rewards(total=1372.25,/step=2.74) | open=1 active=535
+
+Final Results:
+Total Steps: 600
+Finished Projects: 4995
+Successful Projects: 2635
+Success Rate: 0.528
+Total Rewards: 1613.85
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.06251901455410774
+[0.20957975133212853, 0.33853629537328944, 0.3446152796156071, np.int64(37), np.int64(324), 1]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=291 | success=275/291 (94.5%) | effort(total=8231.14,/step=81.50,/fin_proj=13.44) | rewards(total=257.81,/step=2.55) | open=1 active=383
+Step 200: t=201 | finished=1115 | success=1050/1115 (94.2%) | effort(total=20106.61,/step=100.03,/fin_proj=14.61) | rewards(total=727.16,/step=3.62) | open=1 active=492
+Step 300: t=301 | finished=2084 | success=1952/2084 (93.7%) | effort(total=31845.95,/step=105.80,/fin_proj=13.69) | rewards(total=1166.48,/step=3.88) | open=1 active=514
+Step 400: t=401 | finished=3064 | success=2852/3064 (93.1%) | effort(total=43752.19,/step=109.11,/fin_proj=13.24) | rewards(total=1601.72,/step=3.99) | open=1 active=528
+Step 500: t=501 | finished=4062 | success=3753/4062 (92.4%) | effort(total=55779.90,/step=111.34,/fin_proj=12.87) | rewards(total=2025.26,/step=4.04) | open=1 active=526
+
+Final Results:
+Total Steps: 600
+Finished Projects: 5068
+Successful Projects: 4657
+Success Rate: 0.919
+Total Rewards: 2437.33
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.42314594188708354
+[0.3040187921046633, 0.4346363645439446, 0.3093416526728374, np.int64(40), np.int64(241), 0]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=289 | success=270/289 (93.4%) | effort(total=8483.15,/step=83.99,/fin_proj=14.36) | rewards(total=320.70,/step=3.18) | open=1 active=308
+Step 200: t=201 | finished=921 | success=860/921 (93.4%) | effort(total=19669.88,/step=97.86,/fin_proj=17.53) | rewards(total=852.02,/step=4.24) | open=1 active=328
+Step 300: t=301 | finished=1572 | success=1462/1572 (93.0%) | effort(total=30846.61,/step=102.48,/fin_proj=17.57) | rewards(total=1371.54,/step=4.56) | open=1 active=331
+Step 400: t=401 | finished=2225 | success=2066/2225 (92.9%) | effort(total=42110.49,/step=105.01,/fin_proj=17.45) | rewards(total=1884.46,/step=4.70) | open=1 active=334
+Step 500: t=501 | finished=2895 | success=2675/2895 (92.4%) | effort(total=53745.86,/step=107.28,/fin_proj=17.44) | rewards(total=2369.21,/step=4.73) | open=1 active=349
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3590
+Successful Projects: 3300
+Success Rate: 0.919
+Total Rewards: 2896.28
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.41988722430295466
+[0.540620196691995, 0.21878797547333517, 0.7053708647569994, np.int64(28), np.int64(228), 1]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=11
+Step 100: t=101 | finished=39 | success=39/39 (100.0%) | effort(total=2239.41,/step=22.17,/fin_proj=26.82) | rewards(total=19.98,/step=0.20) | open=1 active=40
+Step 200: t=201 | finished=125 | success=122/125 (97.6%) | effort(total=4865.67,/step=24.21,/fin_proj=29.11) | rewards(total=57.37,/step=0.29) | open=1 active=47
+Step 300: t=301 | finished=221 | success=215/221 (97.3%) | effort(total=7338.30,/step=24.38,/fin_proj=29.47) | rewards(total=93.51,/step=0.31) | open=1 active=48
+Step 400: t=401 | finished=309 | success=302/309 (97.7%) | effort(total=9871.89,/step=24.62,/fin_proj=29.64) | rewards(total=126.04,/step=0.31) | open=1 active=45
+Step 500: t=501 | finished=394 | success=384/394 (97.5%) | effort(total=12581.86,/step=25.11,/fin_proj=29.75) | rewards(total=158.40,/step=0.32) | open=1 active=43
+
+Final Results:
+Total Steps: 600
+Finished Projects: 477
+Successful Projects: 462
+Success Rate: 0.969
+Total Rewards: 193.85
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.4672588375269169
+[0.6363631975138526, 0.39592446128350134, 0.5422663846432398, np.int64(31), np.int64(483), 1]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=11
+Step 100: t=101 | finished=39 | success=39/39 (100.0%) | effort(total=2239.41,/step=22.17,/fin_proj=26.82) | rewards(total=19.98,/step=0.20) | open=1 active=40
+Step 200: t=201 | finished=125 | success=121/125 (96.8%) | effort(total=4884.11,/step=24.30,/fin_proj=29.11) | rewards(total=57.79,/step=0.29) | open=1 active=48
+Step 300: t=301 | finished=223 | success=216/223 (96.9%) | effort(total=7483.80,/step=24.86,/fin_proj=29.46) | rewards(total=95.68,/step=0.32) | open=1 active=46
+Step 400: t=401 | finished=315 | success=306/315 (97.1%) | effort(total=9981.85,/step=24.89,/fin_proj=29.62) | rewards(total=132.80,/step=0.33) | open=1 active=48
+Step 500: t=501 | finished=398 | success=389/398 (97.7%) | effort(total=12647.33,/step=25.24,/fin_proj=29.70) | rewards(total=164.39,/step=0.33) | open=1 active=44
+
+Final Results:
+Total Steps: 600
+Finished Projects: 482
+Successful Projects: 470
+Success Rate: 0.975
+Total Rewards: 195.43
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.479294631710362
+[0.8, 0.282795337963781, 0.20428554923479197, np.int64(18), np.int64(59), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=16
+Step 100: t=101 | finished=113 | success=76/113 (67.3%) | effort(total=4103.51,/step=40.63,/fin_proj=19.44) | rewards(total=46.42,/step=0.46) | open=1 active=100
+Step 200: t=201 | finished=313 | success=253/313 (80.8%) | effort(total=10044.18,/step=49.97,/fin_proj=25.38) | rewards(total=120.17,/step=0.60) | open=1 active=110
+Step 300: t=301 | finished=524 | success=442/524 (84.4%) | effort(total=15956.11,/step=53.01,/fin_proj=26.26) | rewards(total=196.34,/step=0.65) | open=1 active=114
+Step 400: t=401 | finished=742 | success=625/742 (84.2%) | effort(total=21822.90,/step=54.42,/fin_proj=26.57) | rewards(total=267.14,/step=0.67) | open=1 active=114
+Step 500: t=501 | finished=961 | success=809/961 (84.2%) | effort(total=27858.01,/step=55.60,/fin_proj=26.79) | rewards(total=347.93,/step=0.69) | open=1 active=114
+
+Final Results:
+Total Steps: 600
+Finished Projects: 1178
+Successful Projects: 995
+Success Rate: 0.845
+Total Rewards: 429.07
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.3721350506875648
+[0.8, 0.7998531932519184, 0.4455159375114428, np.int64(25), np.int64(246), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=13
+Step 100: t=101 | finished=46 | success=45/46 (97.8%) | effort(total=2652.60,/step=26.26,/fin_proj=26.35) | rewards(total=18.81,/step=0.19) | open=1 active=49
+Step 200: t=201 | finished=142 | success=134/142 (94.4%) | effort(total=5348.77,/step=26.61,/fin_proj=28.79) | rewards(total=55.86,/step=0.28) | open=1 active=50
+Step 300: t=301 | finished=237 | success=226/237 (95.4%) | effort(total=7946.40,/step=26.40,/fin_proj=29.23) | rewards(total=95.39,/step=0.32) | open=1 active=49
+Step 400: t=401 | finished=333 | success=320/333 (96.1%) | effort(total=10607.75,/step=26.45,/fin_proj=29.50) | rewards(total=133.61,/step=0.33) | open=1 active=50
+Step 500: t=501 | finished=425 | success=408/425 (96.0%) | effort(total=13443.95,/step=26.83,/fin_proj=29.61) | rewards(total=171.97,/step=0.34) | open=1 active=46
+
+Final Results:
+Total Steps: 600
+Finished Projects: 514
+Successful Projects: 496
+Success Rate: 0.965
+Total Rewards: 209.82
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.4700801943430585
+[0.6541030817616185, 0.26034245285673074, 0.3788766459221331, np.int64(29), np.int64(317), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=19
+Step 100: t=101 | finished=110 | success=87/110 (79.1%) | effort(total=4585.25,/step=45.40,/fin_proj=21.74) | rewards(total=52.71,/step=0.52) | open=1 active=114
+Step 200: t=201 | finished=325 | success=280/325 (86.2%) | effort(total=10361.66,/step=51.55,/fin_proj=25.21) | rewards(total=132.48,/step=0.66) | open=1 active=114
+Step 300: t=301 | finished=543 | success=485/543 (89.3%) | effort(total=16225.59,/step=53.91,/fin_proj=25.81) | rewards(total=218.44,/step=0.73) | open=1 active=120
+Step 400: t=401 | finished=761 | success=688/761 (90.4%) | effort(total=22199.31,/step=55.36,/fin_proj=26.00) | rewards(total=301.91,/step=0.75) | open=1 active=122
+Step 500: t=501 | finished=981 | success=887/981 (90.4%) | effort(total=27951.76,/step=55.79,/fin_proj=26.26) | rewards(total=387.59,/step=0.77) | open=1 active=121
+
+Final Results:
+Total Steps: 600
+Finished Projects: 1204
+Successful Projects: 1093
+Success Rate: 0.908
+Total Rewards: 477.01
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.4222508911372097
+[0.7152562115779195, 0.8, 0.4576007466670208, np.int64(34), np.int64(500), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=213 | success=104/213 (48.8%) | effort(total=5426.09,/step=53.72,/fin_proj=10.82) | rewards(total=123.44,/step=1.22) | open=1 active=210
+Step 200: t=201 | finished=642 | success=371/642 (57.8%) | effort(total=12802.80,/step=63.70,/fin_proj=16.03) | rewards(total=406.59,/step=2.02) | open=1 active=233
+Step 300: t=301 | finished=1116 | success=623/1116 (55.8%) | effort(total=20081.14,/step=66.71,/fin_proj=16.08) | rewards(total=646.10,/step=2.15) | open=1 active=249
+Step 400: t=401 | finished=1613 | success=874/1613 (54.2%) | effort(total=27547.90,/step=68.70,/fin_proj=15.78) | rewards(total=850.92,/step=2.12) | open=1 active=261
+Step 500: t=501 | finished=2150 | success=1133/2150 (52.7%) | effort(total=34731.04,/step=69.32,/fin_proj=15.37) | rewards(total=1060.40,/step=2.12) | open=1 active=278
+
+Final Results:
+Total Steps: 600
+Finished Projects: 2684
+Successful Projects: 1389
+Success Rate: 0.518
+Total Rewards: 1271.93
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.05815565574379988
+[0.6025301864511143, 0.6992098766295394, 0.5593242606886073, np.int64(36), np.int64(58), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=224 | success=142/224 (63.4%) | effort(total=5977.29,/step=59.18,/fin_proj=11.34) | rewards(total=162.56,/step=1.61) | open=1 active=260
+Step 200: t=201 | finished=765 | success=490/765 (64.1%) | effort(total=13964.07,/step=69.47,/fin_proj=14.80) | rewards(total=496.43,/step=2.47) | open=1 active=312
+Step 300: t=301 | finished=1396 | success=856/1396 (61.3%) | effort(total=22008.72,/step=73.12,/fin_proj=14.32) | rewards(total=772.64,/step=2.57) | open=1 active=357
+Step 400: t=401 | finished=2096 | success=1239/2096 (59.1%) | effort(total=30207.58,/step=75.33,/fin_proj=13.54) | rewards(total=1029.03,/step=2.57) | open=1 active=369
+Step 500: t=501 | finished=2842 | success=1605/2842 (56.5%) | effort(total=38936.40,/step=77.72,/fin_proj=13.00) | rewards(total=1260.33,/step=2.52) | open=1 active=385
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3569
+Successful Projects: 1961
+Success Rate: 0.549
+Total Rewards: 1484.99
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.07857385931766536
+[0.6621116430990595, 0.2117209236490952, 0.8, np.int64(34), np.int64(66), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=19
+Step 100: t=101 | finished=198 | success=106/198 (53.5%) | effort(total=4703.03,/step=46.56,/fin_proj=10.54) | rewards(total=126.60,/step=1.25) | open=1 active=243
+Step 200: t=201 | finished=723 | success=398/723 (55.0%) | effort(total=11439.97,/step=56.92,/fin_proj=12.85) | rewards(total=342.75,/step=1.71) | open=1 active=287
+Step 300: t=301 | finished=1318 | success=703/1318 (53.3%) | effort(total=18429.12,/step=61.23,/fin_proj=12.41) | rewards(total=517.37,/step=1.72) | open=1 active=321
+Step 400: t=401 | finished=1946 | success=1005/1946 (51.6%) | effort(total=25416.01,/step=63.38,/fin_proj=12.05) | rewards(total=691.33,/step=1.72) | open=1 active=322
+Step 500: t=501 | finished=2581 | success=1323/2581 (51.3%) | effort(total=32156.52,/step=64.18,/fin_proj=11.88) | rewards(total=864.65,/step=1.73) | open=1 active=338
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3216
+Successful Projects: 1600
+Success Rate: 0.498
+Total Rewards: 1019.77
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.04219644132595257
+[0.6688891157729234, 0.2, 0.2, np.int64(35), np.int64(500), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=289 | success=186/289 (64.4%) | effort(total=8706.07,/step=86.20,/fin_proj=13.82) | rewards(total=233.88,/step=2.32) | open=1 active=331
+Step 200: t=201 | finished=942 | success=625/942 (66.3%) | effort(total=20147.37,/step=100.24,/fin_proj=17.41) | rewards(total=627.80,/step=3.12) | open=1 active=353
+Step 300: t=301 | finished=1639 | success=1042/1639 (63.6%) | effort(total=31496.06,/step=104.64,/fin_proj=17.23) | rewards(total=982.47,/step=3.26) | open=1 active=339
+Step 400: t=401 | finished=2318 | success=1437/2318 (62.0%) | effort(total=43062.69,/step=107.39,/fin_proj=17.21) | rewards(total=1317.54,/step=3.29) | open=1 active=343
+Step 500: t=501 | finished=3016 | success=1830/3016 (60.7%) | effort(total=54824.89,/step=109.43,/fin_proj=17.06) | rewards(total=1647.57,/step=3.29) | open=1 active=379
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3781
+Successful Projects: 2267
+Success Rate: 0.600
+Total Rewards: 1972.70
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.12798093372064723
+[0.755820716941572, 0.4212683714266271, 0.21786595498442585, np.int64(50), np.int64(387), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=290 | success=153/290 (52.8%) | effort(total=8704.82,/step=86.19,/fin_proj=13.89) | rewards(total=193.35,/step=1.91) | open=1 active=322
+Step 200: t=201 | finished=956 | success=576/956 (60.3%) | effort(total=20478.46,/step=101.88,/fin_proj=17.20) | rewards(total=554.27,/step=2.76) | open=1 active=369
+Step 300: t=301 | finished=1662 | success=978/1662 (58.8%) | effort(total=32218.39,/step=107.04,/fin_proj=17.26) | rewards(total=910.09,/step=3.02) | open=1 active=356
+Step 400: t=401 | finished=2352 | success=1376/2352 (58.5%) | effort(total=44063.98,/step=109.89,/fin_proj=17.26) | rewards(total=1266.75,/step=3.16) | open=1 active=355
+Step 500: t=501 | finished=3031 | success=1735/3031 (57.2%) | effort(total=55683.60,/step=111.14,/fin_proj=17.22) | rewards(total=1587.75,/step=3.17) | open=1 active=364
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3730
+Successful Projects: 2113
+Success Rate: 0.566
+Total Rewards: 1895.72
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.10168291845689181
+[0.6731730903779818, 0.2762607270322099, 0.6363819031559926, np.int64(35), np.int64(478), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=19
+Step 100: t=101 | finished=235 | success=117/235 (49.8%) | effort(total=5540.66,/step=54.86,/fin_proj=10.08) | rewards(total=133.31,/step=1.32) | open=1 active=260
+Step 200: t=201 | finished=762 | success=418/762 (54.9%) | effort(total=13481.92,/step=67.07,/fin_proj=14.09) | rewards(total=393.18,/step=1.96) | open=1 active=326
+Step 300: t=301 | finished=1423 | success=764/1423 (53.7%) | effort(total=21615.33,/step=71.81,/fin_proj=13.53) | rewards(total=644.15,/step=2.14) | open=1 active=347
+Step 400: t=401 | finished=2121 | success=1088/2121 (51.3%) | effort(total=29618.87,/step=73.86,/fin_proj=13.15) | rewards(total=864.85,/step=2.16) | open=1 active=365
+Step 500: t=501 | finished=2818 | success=1406/2818 (49.9%) | effort(total=37926.61,/step=75.70,/fin_proj=12.83) | rewards(total=1106.59,/step=2.21) | open=1 active=363
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3513
+Successful Projects: 1734
+Success Rate: 0.494
+Total Rewards: 1325.66
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.0405892260378648
+[0.48143921159499453, 0.4271827344150595, 0.2, np.int64(50), np.int64(201), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=289 | success=219/289 (75.8%) | effort(total=8330.15,/step=82.48,/fin_proj=13.38) | rewards(total=239.68,/step=2.37) | open=1 active=366
+Step 200: t=201 | finished=1047 | success=808/1047 (77.2%) | effort(total=19740.01,/step=98.21,/fin_proj=15.35) | rewards(total=624.59,/step=3.11) | open=1 active=431
+Step 300: t=301 | finished=1898 | success=1442/1898 (76.0%) | effort(total=31411.37,/step=104.36,/fin_proj=14.68) | rewards(total=968.36,/step=3.22) | open=1 active=450
+Step 400: t=401 | finished=2768 | success=2027/2768 (73.2%) | effort(total=42967.54,/step=107.15,/fin_proj=14.29) | rewards(total=1281.43,/step=3.20) | open=1 active=457
+Step 500: t=501 | finished=3656 | success=2589/3656 (70.8%) | effort(total=54654.64,/step=109.09,/fin_proj=14.02) | rewards(total=1582.24,/step=3.16) | open=1 active=487
+
+Final Results:
+Total Steps: 600
+Finished Projects: 4575
+Successful Projects: 3142
+Success Rate: 0.687
+Total Rewards: 1858.63
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.20084933275839045
+[0.7591009872881407, 0.4751074554854121, 0.21503922317085192, np.int64(47), np.int64(413), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=278 | success=155/278 (55.8%) | effort(total=8398.66,/step=83.16,/fin_proj=14.23) | rewards(total=203.13,/step=2.01) | open=1 active=357
+Step 200: t=201 | finished=1065 | success=570/1065 (53.5%) | effort(total=20131.60,/step=100.16,/fin_proj=15.24) | rewards(total=502.36,/step=2.50) | open=1 active=456
+Step 300: t=301 | finished=1947 | success=983/1947 (50.5%) | effort(total=32081.91,/step=106.58,/fin_proj=14.70) | rewards(total=757.92,/step=2.52) | open=1 active=463
+Step 400: t=401 | finished=2858 | success=1406/2858 (49.2%) | effort(total=44170.86,/step=110.15,/fin_proj=14.36) | rewards(total=1010.79,/step=2.52) | open=1 active=474
+Step 500: t=501 | finished=3772 | success=1818/3772 (48.2%) | effort(total=56300.97,/step=112.38,/fin_proj=14.11) | rewards(total=1242.51,/step=2.48) | open=1 active=517
+
+Final Results:
+Total Steps: 600
+Finished Projects: 4729
+Successful Projects: 2215
+Success Rate: 0.468
+Total Rewards: 1461.68
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.005918222779354831
+[0.8, 0.5746561032290501, 0.8, np.int64(47), np.int64(200), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=223 | success=103/223 (46.2%) | effort(total=5407.77,/step=53.54,/fin_proj=10.98) | rewards(total=95.39,/step=0.94) | open=1 active=259
+Step 200: t=201 | finished=765 | success=370/765 (48.4%) | effort(total=13014.43,/step=64.75,/fin_proj=13.65) | rewards(total=311.17,/step=1.55) | open=1 active=301
+Step 300: t=301 | finished=1380 | success=665/1380 (48.2%) | effort(total=20730.90,/step=68.87,/fin_proj=13.49) | rewards(total=509.84,/step=1.69) | open=1 active=347
+Step 400: t=401 | finished=2062 | success=935/2062 (45.3%) | effort(total=28623.04,/step=71.38,/fin_proj=12.96) | rewards(total=659.51,/step=1.64) | open=1 active=370
+Step 500: t=501 | finished=2802 | success=1198/2802 (42.8%) | effort(total=36582.08,/step=73.02,/fin_proj=12.38) | rewards(total=812.95,/step=1.62) | open=1 active=396
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3551
+Successful Projects: 1496
+Success Rate: 0.421
+Total Rewards: 988.24
+4.093199999999982 3.380099999999997 4.0318000000000005 5.292648496839041 0.026727122067672415
+[0.8, 0.7643367653555366, 0.39469307560365596, np.int64(47), np.int64(50), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=195 | success=100/195 (51.3%) | effort(total=5501.34,/step=54.47,/fin_proj=12.27) | rewards(total=130.91,/step=1.30) | open=1 active=233
+Step 200: t=201 | finished=693 | success=359/693 (51.8%) | effort(total=13246.05,/step=65.90,/fin_proj=15.10) | rewards(total=368.37,/step=1.83) | open=1 active=298
+Step 300: t=301 | finished=1285 | success=628/1285 (48.9%) | effort(total=21216.39,/step=70.49,/fin_proj=14.72) | rewards(total=562.02,/step=1.87) | open=1 active=319
+Step 400: t=401 | finished=1922 | success=902/1922 (46.9%) | effort(total=29047.86,/step=72.44,/fin_proj=14.08) | rewards(total=770.97,/step=1.92) | open=1 active=352
+Step 500: t=501 | finished=2615 | success=1184/2615 (45.3%) | effort(total=36776.20,/step=73.41,/fin_proj=13.41) | rewards(total=967.35,/step=1.93) | open=1 active=364
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3352
+Successful Projects: 1463
+Success Rate: 0.436
+Total Rewards: 1143.43
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.02095830415232991
+[0.8, 0.3378151655561183, 0.2, np.int64(44), np.int64(353), np.int64(1)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=291 | success=150/291 (51.5%) | effort(total=8380.49,/step=82.98,/fin_proj=13.43) | rewards(total=175.90,/step=1.74) | open=1 active=384
+Step 200: t=201 | finished=1142 | success=571/1142 (50.0%) | effort(total=20228.24,/step=100.64,/fin_proj=14.39) | rewards(total=432.94,/step=2.15) | open=1 active=487
+Step 300: t=301 | finished=2134 | success=994/2134 (46.6%) | effort(total=32250.29,/step=107.14,/fin_proj=13.43) | rewards(total=635.47,/step=2.11) | open=1 active=503
+Step 400: t=401 | finished=3107 | success=1398/3107 (45.0%) | effort(total=44139.64,/step=110.07,/fin_proj=13.05) | rewards(total=833.51,/step=2.08) | open=1 active=508
+Step 500: t=501 | finished=4115 | success=1792/4115 (43.5%) | effort(total=55897.25,/step=111.57,/fin_proj=12.68) | rewards(total=1017.19,/step=2.03) | open=1 active=549
+
+Final Results:
+Total Steps: 600
+Finished Projects: 5144
+Successful Projects: 2197
+Success Rate: 0.427
+Total Rewards: 1205.22
+4.093199999999982 3.380099999999997 4.0318000000000005 5.292648496839041 0.028228779327693354
+[0.7680389224800741, 0.31242297693026244, 0.2, np.int64(46), np.int64(343), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=277 | success=151/277 (54.5%) | effort(total=8390.53,/step=83.07,/fin_proj=14.59) | rewards(total=202.22,/step=2.00) | open=1 active=364
+Step 200: t=201 | finished=1067 | success=562/1067 (52.7%) | effort(total=20192.24,/step=100.46,/fin_proj=15.17) | rewards(total=501.90,/step=2.50) | open=1 active=474
+Step 300: t=301 | finished=1991 | success=1003/1991 (50.4%) | effort(total=31995.14,/step=106.30,/fin_proj=14.40) | rewards(total=741.15,/step=2.46) | open=1 active=508
+Step 400: t=401 | finished=2967 | success=1439/2967 (48.5%) | effort(total=43974.42,/step=109.66,/fin_proj=13.72) | rewards(total=956.40,/step=2.39) | open=1 active=533
+Step 500: t=501 | finished=3975 | success=1876/3975 (47.2%) | effort(total=55990.72,/step=111.76,/fin_proj=13.31) | rewards(total=1173.89,/step=2.34) | open=1 active=531
+
+Final Results:
+Total Steps: 600
+Finished Projects: 4984
+Successful Projects: 2286
+Success Rate: 0.459
+Total Rewards: 1378.53
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.004894193923919765
+[0.7699535050092381, 0.39051508420451486, 0.2, np.int64(46), np.int64(457), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=285 | success=147/285 (51.6%) | effort(total=8670.60,/step=85.85,/fin_proj=13.97) | rewards(total=211.34,/step=2.09) | open=1 active=372
+Step 200: t=201 | finished=1091 | success=574/1091 (52.6%) | effort(total=20805.99,/step=103.51,/fin_proj=15.26) | rewards(total=490.53,/step=2.44) | open=1 active=486
+Step 300: t=301 | finished=2030 | success=1014/2030 (50.0%) | effort(total=32824.30,/step=109.05,/fin_proj=14.39) | rewards(total=740.75,/step=2.46) | open=1 active=529
+Step 400: t=401 | finished=3044 | success=1455/3044 (47.8%) | effort(total=44732.43,/step=111.55,/fin_proj=13.70) | rewards(total=998.78,/step=2.49) | open=1 active=518
+Step 500: t=501 | finished=4037 | success=1868/4037 (46.3%) | effort(total=57243.25,/step=114.26,/fin_proj=13.29) | rewards(total=1211.64,/step=2.42) | open=1 active=551
+
+Final Results:
+Total Steps: 600
+Finished Projects: 5042
+Successful Projects: 2275
+Success Rate: 0.451
+Total Rewards: 1418.92
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.004486160622768798
+[0.8, 0.8, 0.8, np.int64(45), np.int64(500), np.int64(1)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=264 | success=106/264 (40.2%) | effort(total=5583.10,/step=55.28,/fin_proj=9.41) | rewards(total=136.94,/step=1.36) | open=1 active=312
+Step 200: t=201 | finished=906 | success=408/906 (45.0%) | effort(total=13694.27,/step=68.13,/fin_proj=12.34) | rewards(total=348.67,/step=1.73) | open=1 active=366
+Step 300: t=301 | finished=1637 | success=702/1637 (42.9%) | effort(total=21841.54,/step=72.56,/fin_proj=12.03) | rewards(total=538.78,/step=1.79) | open=1 active=394
+Step 400: t=401 | finished=2410 | success=991/2410 (41.1%) | effort(total=30108.33,/step=75.08,/fin_proj=11.68) | rewards(total=701.62,/step=1.75) | open=1 active=407
+Step 500: t=501 | finished=3204 | success=1281/3204 (40.0%) | effort(total=38639.49,/step=77.12,/fin_proj=11.48) | rewards(total=873.41,/step=1.74) | open=1 active=409
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3968
+Successful Projects: 1568
+Success Rate: 0.395
+Total Rewards: 1039.16
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.05156221259475813
+[0.8, 0.49178969285142804, 0.8, np.int64(42), np.int64(422), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=243 | success=96/243 (39.5%) | effort(total=5575.61,/step=55.20,/fin_proj=9.67) | rewards(total=109.60,/step=1.09) | open=1 active=287
+Step 200: t=201 | finished=842 | success=403/842 (47.9%) | effort(total=14314.89,/step=71.22,/fin_proj=13.81) | rewards(total=329.46,/step=1.64) | open=1 active=343
+Step 300: t=301 | finished=1514 | success=705/1514 (46.6%) | effort(total=22847.34,/step=75.90,/fin_proj=13.62) | rewards(total=525.08,/step=1.74) | open=1 active=395
+Step 400: t=401 | finished=2273 | success=1010/2273 (44.4%) | effort(total=31306.59,/step=78.07,/fin_proj=12.83) | rewards(total=710.28,/step=1.77) | open=1 active=400
+Step 500: t=501 | finished=3055 | success=1330/3055 (43.5%) | effort(total=39913.03,/step=79.67,/fin_proj=12.44) | rewards(total=889.21,/step=1.77) | open=1 active=401
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3830
+Successful Projects: 1624
+Success Rate: 0.424
+Total Rewards: 1049.18
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.023469421279254832
+[0.8, 0.8, 0.8, np.int64(44), np.int64(500), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=223 | success=102/223 (45.7%) | effort(total=5567.64,/step=55.13,/fin_proj=10.65) | rewards(total=131.97,/step=1.31) | open=1 active=280
+Step 200: t=201 | finished=807 | success=383/807 (47.5%) | effort(total=13491.25,/step=67.12,/fin_proj=13.59) | rewards(total=384.83,/step=1.91) | open=1 active=338
+Step 300: t=301 | finished=1474 | success=662/1474 (44.9%) | effort(total=21463.42,/step=71.31,/fin_proj=13.17) | rewards(total=587.00,/step=1.95) | open=1 active=363
+Step 400: t=401 | finished=2190 | success=945/2190 (43.2%) | effort(total=29636.88,/step=73.91,/fin_proj=12.69) | rewards(total=750.79,/step=1.87) | open=1 active=376
+Step 500: t=501 | finished=2912 | success=1217/2912 (41.8%) | effort(total=37852.65,/step=75.55,/fin_proj=12.36) | rewards(total=930.35,/step=1.86) | open=1 active=393
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3658
+Successful Projects: 1490
+Success Rate: 0.407
+Total Rewards: 1094.77
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.04282469823505486
+[0.8, 0.5617928308995301, 0.5288195810984435, np.int64(42), np.int64(500), np.int64(1)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=264 | success=106/264 (40.2%) | effort(total=5583.10,/step=55.28,/fin_proj=9.41) | rewards(total=136.94,/step=1.36) | open=1 active=312
+Step 200: t=201 | finished=906 | success=408/906 (45.0%) | effort(total=13694.27,/step=68.13,/fin_proj=12.34) | rewards(total=348.67,/step=1.73) | open=1 active=366
+Step 300: t=301 | finished=1637 | success=702/1637 (42.9%) | effort(total=21841.54,/step=72.56,/fin_proj=12.03) | rewards(total=538.78,/step=1.79) | open=1 active=394
+Step 400: t=401 | finished=2410 | success=991/2410 (41.1%) | effort(total=30108.33,/step=75.08,/fin_proj=11.68) | rewards(total=701.62,/step=1.75) | open=1 active=407
+Step 500: t=501 | finished=3204 | success=1281/3204 (40.0%) | effort(total=38639.49,/step=77.12,/fin_proj=11.48) | rewards(total=873.41,/step=1.74) | open=1 active=409
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3968
+Successful Projects: 1568
+Success Rate: 0.395
+Total Rewards: 1039.16
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.05156221259475813
+[0.8, 0.5878159590141182, 0.2, np.int64(46), np.int64(500), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=293 | success=144/293 (49.1%) | effort(total=7958.56,/step=78.80,/fin_proj=12.73) | rewards(total=190.70,/step=1.89) | open=1 active=375
+Step 200: t=201 | finished=1112 | success=562/1112 (50.5%) | effort(total=19379.52,/step=96.42,/fin_proj=14.21) | rewards(total=469.06,/step=2.33) | open=1 active=448
+Step 300: t=301 | finished=2003 | success=981/2003 (49.0%) | effort(total=31191.39,/step=103.63,/fin_proj=14.02) | rewards(total=700.01,/step=2.33) | open=1 active=463
+Step 400: t=401 | finished=2915 | success=1374/2915 (47.1%) | effort(total=43451.15,/step=108.36,/fin_proj=13.62) | rewards(total=908.32,/step=2.27) | open=1 active=524
+Step 500: t=501 | finished=3910 | success=1804/3910 (46.1%) | effort(total=55629.05,/step=111.04,/fin_proj=13.40) | rewards(total=1121.62,/step=2.24) | open=1 active=510
+
+Final Results:
+Total Steps: 600
+Finished Projects: 4875
+Successful Projects: 2192
+Success Rate: 0.450
+Total Rewards: 1311.88
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.004680593514863163
+[0.8, 0.8, 0.2, np.int64(46), np.int64(500), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=284 | success=142/284 (50.0%) | effort(total=8386.35,/step=83.03,/fin_proj=13.80) | rewards(total=189.99,/step=1.88) | open=1 active=362
+Step 200: t=201 | finished=1033 | success=542/1033 (52.5%) | effort(total=20066.15,/step=99.83,/fin_proj=15.59) | rewards(total=512.57,/step=2.55) | open=1 active=410
+Step 300: t=301 | finished=1856 | success=941/1856 (50.7%) | effort(total=32124.98,/step=106.73,/fin_proj=15.37) | rewards(total=784.91,/step=2.61) | open=1 active=463
+Step 400: t=401 | finished=2744 | success=1351/2744 (49.2%) | effort(total=44270.77,/step=110.40,/fin_proj=14.89) | rewards(total=1027.42,/step=2.56) | open=1 active=437
+Step 500: t=501 | finished=3637 | success=1737/3637 (47.8%) | effort(total=56124.31,/step=112.02,/fin_proj=14.60) | rewards(total=1279.27,/step=2.55) | open=1 active=484
+
+Final Results:
+Total Steps: 600
+Finished Projects: 4517
+Successful Projects: 2107
+Success Rate: 0.466
+Total Rewards: 1505.35
+4.093199999999983 3.380099999999998 4.0318000000000005 5.292648496839041 0.01214638953788727
+[0.8, 0.2, 0.2, np.int64(47), np.int64(500), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=283 | success=143/283 (50.5%) | effort(total=8379.00,/step=82.96,/fin_proj=13.87) | rewards(total=187.39,/step=1.86) | open=1 active=374
+Step 200: t=201 | finished=1065 | success=534/1065 (50.1%) | effort(total=19772.96,/step=98.37,/fin_proj=14.96) | rewards(total=445.69,/step=2.22) | open=1 active=433
+Step 300: t=301 | finished=1939 | success=931/1939 (48.0%) | effort(total=31339.08,/step=104.12,/fin_proj=14.42) | rewards(total=674.64,/step=2.24) | open=1 active=488
+Step 400: t=401 | finished=2891 | success=1325/2891 (45.8%) | effort(total=43316.78,/step=108.02,/fin_proj=13.82) | rewards(total=870.94,/step=2.17) | open=1 active=509
+Step 500: t=501 | finished=3869 | success=1718/3869 (44.4%) | effort(total=55432.89,/step=110.64,/fin_proj=13.37) | rewards(total=1076.35,/step=2.15) | open=1 active=518
+
+Final Results:
+Total Steps: 600
+Finished Projects: 4850
+Successful Projects: 2112
+Success Rate: 0.435
+Total Rewards: 1270.98
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.018455827523776724
+[0.8, 0.2, 0.2, np.int64(43), np.int64(350), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=273 | success=145/273 (53.1%) | effort(total=8334.59,/step=82.52,/fin_proj=14.24) | rewards(total=185.75,/step=1.84) | open=1 active=336
+Step 200: t=201 | finished=948 | success=547/948 (57.7%) | effort(total=19948.11,/step=99.24,/fin_proj=17.08) | rewards(total=509.78,/step=2.54) | open=1 active=357
+Step 300: t=301 | finished=1632 | success=935/1632 (57.3%) | effort(total=31550.92,/step=104.82,/fin_proj=17.35) | rewards(total=825.19,/step=2.74) | open=1 active=336
+Step 400: t=401 | finished=2297 | success=1279/2297 (55.7%) | effort(total=43333.10,/step=108.06,/fin_proj=17.24) | rewards(total=1104.24,/step=2.75) | open=1 active=370
+Step 500: t=501 | finished=3018 | success=1656/3018 (54.9%) | effort(total=55193.66,/step=110.17,/fin_proj=17.21) | rewards(total=1402.22,/step=2.80) | open=1 active=380
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3770
+Successful Projects: 2025
+Success Rate: 0.537
+Total Rewards: 1665.49
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.07554358040674558
+[0.8, 0.2882024053904883, 0.2, np.int64(47), np.int64(321), np.int64(1)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=291 | success=150/291 (51.5%) | effort(total=8380.49,/step=82.98,/fin_proj=13.43) | rewards(total=175.90,/step=1.74) | open=1 active=384
+Step 200: t=201 | finished=1142 | success=571/1142 (50.0%) | effort(total=20228.24,/step=100.64,/fin_proj=14.39) | rewards(total=432.94,/step=2.15) | open=1 active=487
+Step 300: t=301 | finished=2134 | success=994/2134 (46.6%) | effort(total=32250.29,/step=107.14,/fin_proj=13.43) | rewards(total=635.47,/step=2.11) | open=1 active=503
+Step 400: t=401 | finished=3107 | success=1398/3107 (45.0%) | effort(total=44139.64,/step=110.07,/fin_proj=13.05) | rewards(total=833.51,/step=2.08) | open=1 active=508
+Step 500: t=501 | finished=4115 | success=1792/4115 (43.5%) | effort(total=55897.25,/step=111.57,/fin_proj=12.68) | rewards(total=1017.19,/step=2.03) | open=1 active=549
+
+Final Results:
+Total Steps: 600
+Finished Projects: 5144
+Successful Projects: 2197
+Success Rate: 0.427
+Total Rewards: 1205.22
+4.093199999999982 3.380099999999997 4.0318000000000005 5.292648496839041 0.028228779327693354
+[0.7519059244087085, 0.3937813881918367, 0.2, np.int64(46), np.int64(400), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=277 | success=151/277 (54.5%) | effort(total=8390.53,/step=83.07,/fin_proj=14.59) | rewards(total=202.22,/step=2.00) | open=1 active=364
+Step 200: t=201 | finished=1063 | success=560/1063 (52.7%) | effort(total=20125.27,/step=100.13,/fin_proj=15.20) | rewards(total=486.68,/step=2.42) | open=1 active=475
+Step 300: t=301 | finished=2036 | success=1027/2036 (50.4%) | effort(total=32057.72,/step=106.50,/fin_proj=14.07) | rewards(total=739.43,/step=2.46) | open=1 active=499
+Step 400: t=401 | finished=3022 | success=1437/3022 (47.6%) | effort(total=44205.13,/step=110.24,/fin_proj=13.50) | rewards(total=952.70,/step=2.38) | open=1 active=559
+Step 500: t=501 | finished=4072 | success=1871/4072 (45.9%) | effort(total=56268.67,/step=112.31,/fin_proj=12.99) | rewards(total=1160.02,/step=2.32) | open=1 active=549
+
+Final Results:
+Total Steps: 600
+Finished Projects: 5117
+Successful Projects: 2304
+Success Rate: 0.450
+Total Rewards: 1377.08
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.003289100347054208
+[0.7532186903512361, 0.5152543147286355, 0.2, np.int64(46), np.int64(400), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=273 | success=159/273 (58.2%) | effort(total=8679.26,/step=85.93,/fin_proj=14.40) | rewards(total=208.35,/step=2.06) | open=1 active=293
+Step 200: t=201 | finished=886 | success=556/886 (62.8%) | effort(total=20374.17,/step=101.36,/fin_proj=18.49) | rewards(total=591.50,/step=2.94) | open=1 active=344
+Step 300: t=301 | finished=1570 | success=952/1570 (60.6%) | effort(total=31982.09,/step=106.25,/fin_proj=18.11) | rewards(total=937.70,/step=3.12) | open=1 active=360
+Step 400: t=401 | finished=2283 | success=1351/2283 (59.2%) | effort(total=43894.77,/step=109.46,/fin_proj=17.76) | rewards(total=1261.09,/step=3.14) | open=1 active=409
+Step 500: t=501 | finished=3074 | success=1755/3074 (57.1%) | effort(total=55785.52,/step=111.35,/fin_proj=17.12) | rewards(total=1567.44,/step=3.13) | open=1 active=448
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3925
+Successful Projects: 2176
+Success Rate: 0.554
+Total Rewards: 1866.71
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.08215177456750489
+[0.8, 0.8, 0.8, np.int64(39), np.int64(50), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=18
+Step 100: t=101 | finished=192 | success=86/192 (44.8%) | effort(total=5173.07,/step=51.22,/fin_proj=11.48) | rewards(total=107.06,/step=1.06) | open=1 active=221
+Step 200: t=201 | finished=655 | success=330/655 (50.4%) | effort(total=12472.92,/step=62.05,/fin_proj=14.95) | rewards(total=339.19,/step=1.69) | open=1 active=261
+Step 300: t=301 | finished=1194 | success=579/1194 (48.5%) | effort(total=19844.75,/step=65.93,/fin_proj=14.92) | rewards(total=544.62,/step=1.81) | open=1 active=292
+Step 400: t=401 | finished=1763 | success=845/1763 (47.9%) | effort(total=27235.18,/step=67.92,/fin_proj=14.48) | rewards(total=735.29,/step=1.83) | open=1 active=302
+Step 500: t=501 | finished=2340 | success=1092/2340 (46.7%) | effort(total=34844.82,/step=69.55,/fin_proj=14.18) | rewards(total=924.48,/step=1.85) | open=1 active=295
+
+Final Results:
+Total Steps: 600
+Finished Projects: 2893
+Successful Projects: 1348
+Success Rate: 0.466
+Total Rewards: 1119.64
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.015133638040231878
+[0.8, 0.7390136683228734, 0.8, np.int64(39), np.int64(109), np.int64(1)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=264 | success=106/264 (40.2%) | effort(total=5583.10,/step=55.28,/fin_proj=9.41) | rewards(total=136.94,/step=1.36) | open=1 active=312
+Step 200: t=201 | finished=906 | success=408/906 (45.0%) | effort(total=13694.27,/step=68.13,/fin_proj=12.34) | rewards(total=348.67,/step=1.73) | open=1 active=366
+Step 300: t=301 | finished=1637 | success=702/1637 (42.9%) | effort(total=21841.54,/step=72.56,/fin_proj=12.03) | rewards(total=538.78,/step=1.79) | open=1 active=394
+Step 400: t=401 | finished=2410 | success=991/2410 (41.1%) | effort(total=30108.33,/step=75.08,/fin_proj=11.68) | rewards(total=701.62,/step=1.75) | open=1 active=407
+Step 500: t=501 | finished=3204 | success=1281/3204 (40.0%) | effort(total=38639.49,/step=77.12,/fin_proj=11.48) | rewards(total=873.41,/step=1.74) | open=1 active=409
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3968
+Successful Projects: 1568
+Success Rate: 0.395
+Total Rewards: 1039.16
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.05156221259475813
+[0.8, 0.8, 0.8, np.int64(37), np.int64(50), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=243 | success=96/243 (39.5%) | effort(total=5575.61,/step=55.20,/fin_proj=9.67) | rewards(total=109.60,/step=1.09) | open=1 active=287
+Step 200: t=201 | finished=842 | success=403/842 (47.9%) | effort(total=14314.89,/step=71.22,/fin_proj=13.81) | rewards(total=329.46,/step=1.64) | open=1 active=343
+Step 300: t=301 | finished=1514 | success=705/1514 (46.6%) | effort(total=22847.34,/step=75.90,/fin_proj=13.62) | rewards(total=525.08,/step=1.74) | open=1 active=395
+Step 400: t=401 | finished=2273 | success=1010/2273 (44.4%) | effort(total=31306.59,/step=78.07,/fin_proj=12.83) | rewards(total=710.28,/step=1.77) | open=1 active=400
+Step 500: t=501 | finished=3055 | success=1330/3055 (43.5%) | effort(total=39913.03,/step=79.67,/fin_proj=12.44) | rewards(total=889.21,/step=1.77) | open=1 active=401
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3830
+Successful Projects: 1624
+Success Rate: 0.424
+Total Rewards: 1049.18
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.023469421279254832
+[0.7297358755877279, 0.8, 0.8, np.int64(38), np.int64(215), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=223 | success=114/223 (51.1%) | effort(total=5571.80,/step=55.17,/fin_proj=10.66) | rewards(total=142.34,/step=1.41) | open=1 active=279
+Step 200: t=201 | finished=819 | success=431/819 (52.6%) | effort(total=13794.86,/step=68.63,/fin_proj=13.57) | rewards(total=400.90,/step=1.99) | open=1 active=346
+Step 300: t=301 | finished=1497 | success=765/1497 (51.1%) | effort(total=22016.28,/step=73.14,/fin_proj=13.23) | rewards(total=622.87,/step=2.07) | open=1 active=369
+Step 400: t=401 | finished=2206 | success=1072/2206 (48.6%) | effort(total=30011.69,/step=74.84,/fin_proj=12.77) | rewards(total=824.23,/step=2.06) | open=1 active=360
+Step 500: t=501 | finished=2916 | success=1376/2916 (47.2%) | effort(total=38415.48,/step=76.68,/fin_proj=12.57) | rewards(total=1030.74,/step=2.06) | open=1 active=369
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3621
+Successful Projects: 1650
+Success Rate: 0.456
+Total Rewards: 1193.23
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.0004277489703757298
+[0.7071147109266711, 0.8, 0.8, np.int64(37), np.int64(81), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=224 | success=113/224 (50.4%) | effort(total=6126.32,/step=60.66,/fin_proj=11.68) | rewards(total=149.76,/step=1.48) | open=1 active=256
+Step 200: t=201 | finished=754 | success=419/754 (55.6%) | effort(total=14801.49,/step=73.64,/fin_proj=15.65) | rewards(total=437.31,/step=2.18) | open=1 active=293
+Step 300: t=301 | finished=1348 | success=753/1348 (55.9%) | effort(total=23788.79,/step=79.03,/fin_proj=15.95) | rewards(total=715.75,/step=2.38) | open=1 active=350
+Couldn't find project: 0
+Step 400: t=401 | finished=2046 | success=1093/2046 (53.4%) | effort(total=32702.41,/step=81.55,/fin_proj=14.99) | rewards(total=981.35,/step=2.45) | open=1 active=369
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Couldn't find project: 0
+Step 500: t=501 | finished=2767 | success=1408/2767 (50.9%) | effort(total=41651.07,/step=83.14,/fin_proj=14.34) | rewards(total=1194.57,/step=2.38) | open=1 active=406
+Couldn't find project: 0
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3521
+Successful Projects: 1717
+Success Rate: 0.488
+Total Rewards: 1412.39
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.026494941068444022
+[0.7379702937560797, 0.7324940417352488, 0.8, np.int64(39), np.int64(500), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=19
+Step 100: t=101 | finished=208 | success=107/208 (51.4%) | effort(total=5272.55,/step=52.20,/fin_proj=10.94) | rewards(total=118.88,/step=1.18) | open=1 active=251
+Step 200: t=201 | finished=722 | success=410/722 (56.8%) | effort(total=12858.45,/step=63.97,/fin_proj=14.33) | rewards(total=345.70,/step=1.72) | open=1 active=290
+Step 300: t=301 | finished=1314 | success=704/1314 (53.6%) | effort(total=20335.82,/step=67.56,/fin_proj=14.03) | rewards(total=529.86,/step=1.76) | open=1 active=314
+Step 400: t=401 | finished=1930 | success=982/1930 (50.9%) | effort(total=27807.30,/step=69.34,/fin_proj=13.41) | rewards(total=710.06,/step=1.77) | open=1 active=316
+Step 500: t=501 | finished=2562 | success=1265/2562 (49.4%) | effort(total=35316.76,/step=70.49,/fin_proj=13.10) | rewards(total=908.30,/step=1.81) | open=1 active=338
+
+Final Results:
+Total Steps: 600
+Finished Projects: 3194
+Successful Projects: 1548
+Success Rate: 0.485
+Total Rewards: 1086.26
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.02957922444834049
+[0.8, 0.6804964389725594, 0.8, np.int64(10), np.int64(144), np.int64(1)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=11
+Step 100: t=101 | finished=39 | success=39/39 (100.0%) | effort(total=2239.41,/step=22.17,/fin_proj=26.82) | rewards(total=19.98,/step=0.20) | open=1 active=40
+Step 200: t=201 | finished=124 | success=117/124 (94.4%) | effort(total=4782.14,/step=23.79,/fin_proj=29.06) | rewards(total=55.06,/step=0.27) | open=1 active=44
+Step 300: t=301 | finished=212 | success=198/212 (93.4%) | effort(total=7181.46,/step=23.86,/fin_proj=29.50) | rewards(total=88.07,/step=0.29) | open=1 active=45
+Step 400: t=401 | finished=305 | success=285/305 (93.4%) | effort(total=9602.23,/step=23.95,/fin_proj=29.60) | rewards(total=128.09,/step=0.32) | open=1 active=44
+Step 500: t=501 | finished=384 | success=357/384 (93.0%) | effort(total=12268.84,/step=24.49,/fin_proj=29.72) | rewards(total=155.97,/step=0.31) | open=1 active=46
+
+Final Results:
+Total Steps: 600
+Finished Projects: 469
+Successful Projects: 436
+Success Rate: 0.930
+Total Rewards: 187.27
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.43204825489876786
+[0.8, 0.33268710782569744, 0.2, np.int64(47), np.int64(171), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=273 | success=153/273 (56.0%) | effort(total=8593.37,/step=85.08,/fin_proj=14.58) | rewards(total=200.51,/step=1.99) | open=1 active=362
+Step 200: t=201 | finished=1026 | success=549/1026 (53.5%) | effort(total=20292.57,/step=100.96,/fin_proj=15.87) | rewards(total=529.84,/step=2.64) | open=1 active=423
+Step 300: t=301 | finished=1879 | success=939/1879 (50.0%) | effort(total=32026.07,/step=106.40,/fin_proj=15.24) | rewards(total=790.16,/step=2.63) | open=1 active=449
+Step 400: t=401 | finished=2747 | success=1334/2747 (48.6%) | effort(total=44265.70,/step=110.39,/fin_proj=14.81) | rewards(total=1043.35,/step=2.60) | open=1 active=445
+Step 500: t=501 | finished=3619 | success=1735/3619 (47.9%) | effort(total=56300.02,/step=112.38,/fin_proj=14.73) | rewards(total=1298.90,/step=2.59) | open=1 active=452
+
+Final Results:
+Total Steps: 600
+Finished Projects: 4472
+Successful Projects: 2113
+Success Rate: 0.472
+Total Rewards: 1564.04
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.014819107234837592
+[0.8, 0.8, 0.2, np.int64(46), np.int64(50), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=275 | success=154/275 (56.0%) | effort(total=8393.00,/step=83.10,/fin_proj=14.76) | rewards(total=198.65,/step=1.97) | open=1 active=364
+Step 200: t=201 | finished=1054 | success=549/1054 (52.1%) | effort(total=20156.72,/step=100.28,/fin_proj=15.55) | rewards(total=474.20,/step=2.36) | open=1 active=450
+Step 300: t=301 | finished=1913 | success=946/1913 (49.5%) | effort(total=31792.95,/step=105.62,/fin_proj=14.76) | rewards(total=709.37,/step=2.36) | open=1 active=462
+Step 400: t=401 | finished=2785 | success=1345/2785 (48.3%) | effort(total=43835.95,/step=109.32,/fin_proj=14.57) | rewards(total=929.97,/step=2.32) | open=1 active=447
+Step 500: t=501 | finished=3631 | success=1714/3631 (47.2%) | effort(total=55968.30,/step=111.71,/fin_proj=14.44) | rewards(total=1146.26,/step=2.29) | open=1 active=445
+
+Final Results:
+Total Steps: 600
+Finished Projects: 4516
+Successful Projects: 2107
+Success Rate: 0.467
+Total Rewards: 1367.90
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.011521960141734622
+[0.8, 0.2, 0.2, np.int64(46), np.int64(50), np.int64(1)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=291 | success=150/291 (51.5%) | effort(total=8380.49,/step=82.98,/fin_proj=13.43) | rewards(total=175.90,/step=1.74) | open=1 active=384
+Step 200: t=201 | finished=1142 | success=571/1142 (50.0%) | effort(total=20228.24,/step=100.64,/fin_proj=14.39) | rewards(total=432.94,/step=2.15) | open=1 active=487
+Step 300: t=301 | finished=2134 | success=994/2134 (46.6%) | effort(total=32250.29,/step=107.14,/fin_proj=13.43) | rewards(total=635.47,/step=2.11) | open=1 active=503
+Step 400: t=401 | finished=3107 | success=1398/3107 (45.0%) | effort(total=44139.64,/step=110.07,/fin_proj=13.05) | rewards(total=833.51,/step=2.08) | open=1 active=508
+Step 500: t=501 | finished=4115 | success=1792/4115 (43.5%) | effort(total=55897.25,/step=111.57,/fin_proj=12.68) | rewards(total=1017.19,/step=2.03) | open=1 active=549
+
+Final Results:
+Total Steps: 600
+Finished Projects: 5144
+Successful Projects: 2197
+Success Rate: 0.427
+Total Rewards: 1205.22
+4.093199999999982 3.380099999999997 4.0318000000000005 5.292648496839041 0.028228779327693354
+[0.2, 0.7108719695019439, 0.8, np.int64(23), np.int64(470), np.int64(0)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=10
+Step 100: t=101 | finished=32 | success=31/32 (96.9%) | effort(total=1938.66,/step=19.19,/fin_proj=27.00) | rewards(total=15.76,/step=0.16) | open=1 active=36
+Step 200: t=201 | finished=106 | success=103/106 (97.2%) | effort(total=4203.06,/step=20.91,/fin_proj=29.15) | rewards(total=49.99,/step=0.25) | open=1 active=41
+Step 300: t=301 | finished=186 | success=182/186 (97.8%) | effort(total=6326.67,/step=21.02,/fin_proj=29.54) | rewards(total=83.31,/step=0.28) | open=1 active=42
+Step 400: t=401 | finished=268 | success=260/268 (97.0%) | effort(total=8475.04,/step=21.13,/fin_proj=29.69) | rewards(total=116.36,/step=0.29) | open=1 active=39
+Step 500: t=501 | finished=340 | success=332/340 (97.6%) | effort(total=10679.46,/step=21.32,/fin_proj=29.78) | rewards(total=147.34,/step=0.29) | open=1 active=33
+
+Final Results:
+Total Steps: 600
+Finished Projects: 401
+Successful Projects: 391
+Success Rate: 0.975
+Total Rewards: 175.29
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.4726279650436954
+[0.6645163304459472, 0.8, 0.8, np.int64(40), np.int64(50), np.int64(1)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=264 | success=142/264 (53.8%) | effort(total=5641.30,/step=55.85,/fin_proj=9.42) | rewards(total=160.34,/step=1.59) | open=1 active=309
+Step 200: t=201 | finished=919 | success=488/919 (53.1%) | effort(total=13641.95,/step=67.87,/fin_proj=12.17) | rewards(total=414.00,/step=2.06) | open=1 active=372
+Step 300: t=301 | finished=1663 | success=846/1663 (50.9%) | effort(total=21704.43,/step=72.11,/fin_proj=11.75) | rewards(total=634.40,/step=2.11) | open=1 active=402
+Step 400: t=401 | finished=2465 | success=1209/2465 (49.0%) | effort(total=30098.98,/step=75.06,/fin_proj=11.32) | rewards(total=835.43,/step=2.08) | open=1 active=420
+Step 500: t=501 | finished=3288 | success=1574/3288 (47.9%) | effort(total=38430.96,/step=76.71,/fin_proj=11.16) | rewards(total=1033.33,/step=2.06) | open=1 active=431
+
+Final Results:
+Total Steps: 600
+Finished Projects: 4107
+Successful Projects: 1910
+Success Rate: 0.465
+Total Rewards: 1212.39
+4.093199999999982 3.380099999999998 4.0318000000000005 5.292648496839041 0.009695842913995667
+[0.6635400628645529, 0.7480604406644062, 0.8, np.int64(42), np.int64(50), np.int64(1)]
+Agent policy distribution: {np.str_('careerist'): np.int64(400), np.str_('mass_producer'): np.int64(400), np.str_('orthodox_scientist'): np.int64(400)}
+Step 0: t=1 | finished=0 | success=0/0 (0.0%) | effort(total=0.00,/step=0.00,/fin_proj=0.00) | rewards(total=0.00,/step=0.00) | open=1 active=20
+Step 100: t=101 | finished=264 | success=141/264 (53.4%) | effort(total=5653.80,/step=55.98,/fin_proj=9.42) | rewards(total=157.97,/step=1.56) | open=1 active=302
+Step 200: t=201 | finished=909 | success=478/909 (52.6%) | effort(total=13816.16,/step=68.74,/fin_proj=12.31) | rewards(total=413.97,/step=2.06) | open=1 active=379
+Step 300: t=301 | finished=1670 | success=840/1670 (50.3%) | effort(total=21959.09,/step=72.95,/fin_proj=11.94) | rewards(total=631.52,/step=2.10) | open=1 active=401
+Step 400: t=401 | finished=2480 | success=1209/2480 (48.8%) | effort(total=30471.72,/step=75.99,/fin_proj=11.44) | rewards(total=830.91,/step=2.07) | open=1 active=434
+Step 500: t=501 | finished=3327 | success=1591/3327 (47.8%) | effort(total=39241.07,/step=78.33,/fin_proj=11.19) | rewards(total=1038.98,/step=2.07) | open=1 active=474
+
+Final Results:
+Total Steps: 600
+Finished Projects: 4209
+Successful Projects: 1967
+Success Rate: 0.467
+Total Rewards: 1217.85
+4.093199999999982 3.380099999999997 4.0318000000000005 5.292648496839041 0.0089354573238839
+Best parameters: [0.7297358755877279, 0.8, 0.8, np.int64(38), np.int64(215), np.int64(0)]
