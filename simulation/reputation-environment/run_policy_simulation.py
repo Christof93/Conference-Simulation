@@ -244,15 +244,35 @@ def compare_policy_performances():
 if __name__ == "__main__":
     # Run a single simulation with balanced policies
     print("Running single simulation with balanced policies...")
+    # run_simulation_with_policies(
+    #     n_agents=2_400,
+    #     start_agents=200,
+    #     max_steps=250,
+    #     max_rewardless_steps=215,
+    #     n_groups=20,
+    #     max_peer_group_size=300,
+    #     policy_distribution=POLICY_CONFIGS["Balanced"],
+    #     output_file_prefix="balanced",
+    #     group_policy_homogenous=False,
+    # )
     run_simulation_with_policies(
-        n_agents=2_400,
+        n_agents=1_200,
         start_agents=200,
-        max_steps=250,
+        max_steps=600,
         n_groups=20,
         max_peer_group_size=300,
-        policy_distribution=POLICY_CONFIGS["Balanced"],
+        max_rewardless_steps=215,
+        policy_distribution={
+            "careerist": 1 / 3,  # theta[4][0],
+            "orthodox_scientist": 1 / 3,  # theta[4][1],
+            "mass_producer": 1 / 3,  # theta[4][2],
+        },
         output_file_prefix="balanced",
         group_policy_homogenous=False,
+        acceptance_threshold=0.73,
+        novelty_threshold=0.8,
+        prestige_threshold=0.8,
+        effort_threshold=38,
     )
 
     # print("Running single simulation with mass producer policies...")
