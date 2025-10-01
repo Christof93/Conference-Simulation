@@ -109,6 +109,14 @@ def run_simulation_with_policies(
             f"calibration_observations.jsonl",
             f"calibration_projects.json",
         )
+    else:
+        log = SimLog(
+            "log",
+            f"{output_file_prefix}_actions.jsonl",
+            f"{output_file_prefix}_observations.jsonl",
+            f"{output_file_prefix}_projects.json",
+        )
+
     log.start()
 
     # Reset environment
@@ -176,6 +184,7 @@ def run_simulation_with_policies(
         if all(terminations.values()):
             print(f"Simulation ended at step {step}")
             break
+
     if output_file_prefix is not None:
         env.area.save(f"log/{output_file_prefix}_area.pickle")
 
