@@ -398,6 +398,7 @@ def main():
             [0, 1],  # Boolean → treat as 0/1
         ],
     }
+    # sensitivity_analysis(problem)
     real_data = {
         "papers_per_author": np.histogram(np.load("papers_per_author.npy"), 200)[0],
         "authors_per_paper": np.histogram(np.load("authors_per_paper.npy"), 200)[0],
@@ -415,14 +416,7 @@ def main():
     real_data["lifespan"] = real_data["lifespan"] / real_data["lifespan"].sum()
     real_data["quality"] = real_data["quality"] / real_data["quality"].sum()
     real_data["acceptance"] = real_data["acceptance"].mean()
-    # sensitivity_analysis(problem)
-    real_data = {
-        "papers_per_author": np.load("papers_per_author.npy"),
-        "authors_per_paper": np.load("authors_per_paper.npy"),
-        "lifespan": np.load("author_lifespan.npy"),
-        "quality": np.load("quality_histogram.npy"),
-        "acceptance": np.load("acceptance_histogram.npy"),
-    }
+    
     calibrate(problem, real_data)
 
 
