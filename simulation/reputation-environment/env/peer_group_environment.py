@@ -1,6 +1,5 @@
 from collections import Counter
 from copy import copy, deepcopy
-from hmac import new
 from typing import Any, Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
 import networkx as nx
@@ -10,6 +9,7 @@ from gymnasium.spaces import Dict as GymDict
 from gymnasium.spaces import Discrete, MultiBinary
 from pettingzoo import ParallelEnv
 from scipy.special import softmax
+from scipy.stats import norm
 
 from .area import Area
 from .project import Project
@@ -23,6 +23,41 @@ def sigmoid(x, midpoint=0.0, sharpness=1.0):
     - sharpness: controls steepness (higher = steeper)
     """
     return 1.0 / (1.0 + np.exp(-sharpness * (x - midpoint)))
+
+
+class GaussianMixture:
+    def __init__(self, weights, mus, sds, rng=None):
+        """
+        Create a Gaussian mixture model.
+
+        Parameters
+        ----------
+        weights : list or tuple of floats
+            Mixture weights, must sum to 1.
+        mus : list or tuple of floats
+            Means of the Gaussian components.
+        sds : list or tuple of floats
+            Standard deviations of the components.
+        rng : np.random.Generator, optional
+            Random generator (default: np.random.default_rng()).
+        """
+        self.weights = np.array(weights)
+        self.mus = np.array(mus)
+        self.sds = np.array(sds)
+        self.rng = rng or np.random.default_rng()
+
+    def pdf(self, x):
+        """Evaluate the PDF of the Gaussian mixture at x."""
+        pdf_vals = np.zeros_like(x, dtype=float)
+        for w, mu, sd in zip(self.weights, self.mus, self.sds):
+            pdf_vals += w * norm.pdf(x, loc=mu, scale=sd)
+        return pdf_vals
+
+    def sample(self, n=1):
+        """Draw n samples from the Gaussian mixture."""
+        choices = self.rng.choice(len(self.weights), size=n, p=self.weights)
+        samples = np.array([self.rng.normal(self.mus[i], self.sds[i]) for i in choices])
+        return samples
 
 
 class PeerGroupEnvironment(ParallelEnv):
@@ -53,6 +88,11 @@ class PeerGroupEnvironment(ParallelEnv):
         self.n_projects_per_step: int = n_projects_per_step
         self.max_projects_per_agent: int = max_projects_per_agent
         self.max_agent_age: int = max_agent_age
+        self.age_distribution = GaussianMixture(
+            weights=[0.5, 0.5],
+            mus=[52, self.max_agent_age],
+            sds=[52, self.max_agent_age / 4],
+        )
         self.max_rewardless_steps: int = max_rewardless_steps
         self.growth_rate: float = growth_rate
         self.acceptance_threshold: float = acceptance_threshold
@@ -67,6 +107,8 @@ class PeerGroupEnvironment(ParallelEnv):
         self._peer_groups_changed: bool = False
         self.timestep: int = 0
         self.agent_steps = np.zeros(self.n_agents, dtype=np.int32)
+        self.agent_ages = self.age_distribution.sample(self.n_agents)
+        print(self.agent_ages)
         self.rewardless_steps = np.zeros(self.n_agents, dtype=np.int32)
         self.agent_rewards = np.zeros(self.n_agents, dtype=np.float32)
         self.agent_completed_projects = np.zeros(self.n_agents, dtype=np.int32)
@@ -235,6 +277,7 @@ class PeerGroupEnvironment(ParallelEnv):
         # Reset state variables
         self.timestep = 0
         self.agent_steps = np.zeros(self.n_agents, dtype=np.int32)
+        self.agent_ages = self.age_distribution.sample(self.n_agents)
         self.rewardless_steps = np.zeros(self.n_agents, dtype=np.int32)
         self.agent_rewards = np.zeros(self.n_agents, dtype=np.float32)
         self.agent_completed_projects = np.zeros(self.n_agents, dtype=np.int32)
@@ -725,16 +768,19 @@ class PeerGroupEnvironment(ParallelEnv):
                 midpoint=self.max_rewardless_steps * 0.5,
                 sharpness=1 / (self.max_rewardless_steps * 0.0625),
             )
-            age_prob = sigmoid(
-                age_dist,
-                midpoint=self.max_agent_age * 0.5,
-                # TODO: set this sharpness as parameter?
-                sharpness=1 / (self.max_agent_age * 0.0625),
-            )
+            # age_prob = sigmoid(
+            #     age_dist,
+            #     midpoint=self.max_agent_age * 0.5,
+            #     # TODO: set this sharpness as parameter?
+            #     sharpness=1 / (self.max_agent_age * 0.0625),
+            # )
 
-            termination_prob = min(rewardless_prob, age_prob)
+            # termination_prob = min(rewardless_prob, age_prob)
             # Stochastic decision
-            terminations[a] = np.random.rand() < termination_prob
+            terminations[a] = (
+                np.random.rand() < rewardless_prob
+                or self.agent_steps[idx] > self.agent_ages[idx]
+            )
 
         self.terminated_agents = self.terminated_agents | np.fromiter(
             terminations.values(), dtype=bool
