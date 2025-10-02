@@ -480,7 +480,7 @@ class PeerGroupEnvironment(ParallelEnv):
         probabilities = []
         max_reputation = np.max(
             [self.agent_rewards[agent_i] for agent_i in new_project.contributors]
-        )
+        ) or 1
         # choose weighted by contributor reputation
         for agent_i in new_project.contributors:
             all_contributors_projects += self.agent_successful_projects[agent_i]

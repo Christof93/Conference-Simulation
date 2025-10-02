@@ -262,27 +262,30 @@ def sensitivity_analysis(problem):
             )
         except Exception as e:
             print(e)
-            return [np.nan] * 5
+            return [np.nan]*5
         with open("log/sensitivity_projects.json", "r") as f:
             run_projects = json.load(f)
         sim_data = build_stats(run_projects)
 
         # Outputs for sensitivity
         return [
-            float(np.mean(sim_data["papers_per_author"])),
-            float(np.mean(sim_data["authors_per_paper"])),
-            float(np.mean(sim_data["lifespan"])),
-            float(np.mean(sim_data["quality"])),
-            float(np.mean(sim_data["acceptance"])),
+            float(np.nanmean(sim_data["papers_per_author"])),
+            float(np.nanmean(sim_data["authors_per_paper"])),
+            float(np.nanmean(sim_data["lifespan"])),
+            float(np.nanmean(sim_data["quality"])),
+            float(np.nanmean(sim_data["acceptance"])),
         ]
 
     Y = []
     for i, p in enumerate(param_values):
         print(f"Sensitivity Analysis run {i+1}/{len(param_values)}")
         outputs = run_model(p)
-        if not np.isnan(outputs).any():
-            Y.append(outputs)
+        Y.append(outputs)
+
     Y = np.array(Y)
+    for i in range(Y.shape[0]):
+        if np.isnan(Y[i]).any():
+            Y[i] = np.nanmean(Y, axis=0)
     # --- Step 4: Sobol sensitivity analysis + Save results ---
     output_names = [
         "papers_per_author",
@@ -463,16 +466,16 @@ def main():
             [0, 1],  # Boolean → treat as 0/1
         ],
     }
-    # sensitivity_analysis(problem)
-    real_data = {
-        "papers_per_author": np.load("papers_per_author.npy"),
-        "authors_per_paper": np.load("authors_per_paper.npy"),
-        "lifespan": np.load("author_lifespan.npy"),
-        "quality": np.load("quality_histogram.npy"),
-        "acceptance": np.load("acceptance_histogram.npy"),
-    }
+    sensitivity_analysis(problem)
+    # real_data = {
+    #     "papers_per_author": np.load("papers_per_author.npy"),
+    #     "authors_per_paper": np.load("authors_per_paper.npy"),
+    #     "lifespan": np.load("author_lifespan.npy"),
+    #     "quality": np.load("quality_histogram.npy"),
+    #     "acceptance": np.load("acceptance_histogram.npy"),
+    # }
 
-    calibrate(problem, real_data)
+    # calibrate(problem, real_data)
 
 
 if __name__ == "__main__":
