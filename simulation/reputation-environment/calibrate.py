@@ -1,6 +1,7 @@
 import json
 from collections import defaultdict
 
+import matplotlib.pyplot as plt
 import numpy as np
 from neo4j import GraphDatabase
 from run_policy_simulation import run_simulation_with_policies
@@ -381,6 +382,42 @@ def calibrate(problem, real_data):
     print("Best parameters:", res.x)
 
 
+# --- Build normalized histograms with edges ---
+def build_normalized_hist(data, bins):
+    counts, edges = np.histogram(data, bins=bins)
+    counts = counts / counts.sum()
+    centers = 0.5 * (edges[:-1] + edges[1:])  # bin centers
+    return counts, centers
+
+
+def plot_calibration_overlays(
+    real_data, sim_data, real_centers, sim_centers, outfile=None
+):
+    metrics = [
+        ("papers_per_author", "Distribution of Papers per Author", "Papers per author"),
+        ("authors_per_paper", "Authors per Paper", "Authors per paper"),
+        ("lifespan", "Career Length", "Years active"),
+        ("quality", "Paper Quality", "Quality score"),
+    ]
+
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+
+    for ax, (key, title, xlabel) in zip(axes.flatten(), metrics):
+        ax.plot(real_centers[key], real_data[key], label="Real", lw=2)
+        ax.plot(
+            sim_centers[key], sim_data[key], label="Simulation", lw=2, linestyle="--"
+        )
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel("Probability density")
+        ax.legend()
+
+    plt.tight_layout()
+    if outfile:
+        plt.savefig(outfile, dpi=300)
+    plt.show()
+
+
 def main():
     problem = {
         "num_vars": 6,
@@ -419,7 +456,7 @@ def main():
     real_data["lifespan"] = real_data["lifespan"] / real_data["lifespan"].sum()
     real_data["quality"] = real_data["quality"] / real_data["quality"].sum()
     real_data["acceptance"] = real_data["acceptance"].mean()
-    
+
     calibrate(problem, real_data)
 
 
