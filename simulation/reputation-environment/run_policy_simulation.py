@@ -102,21 +102,13 @@ def run_simulation_with_policies(
 
     # Initialize stats tracker
     stats = SimulationStats()
-    if output_file_prefix is None:
-        log = SimLog(
-            "log",
-            f"calibration_actions.jsonl",
-            f"calibration_observations.jsonl",
-            f"calibration_projects.json",
-        )
-    else:
-        log = SimLog(
-            "log",
-            f"{output_file_prefix}_actions.jsonl",
-            f"{output_file_prefix}_observations.jsonl",
-            f"{output_file_prefix}_projects.json",
-        )
 
+    log = SimLog(
+        "log",
+        f"{output_file_prefix}_actions.jsonl",
+        f"{output_file_prefix}_observations.jsonl",
+        f"{output_file_prefix}_projects.json",
+    )
     log.start()
 
     # Reset environment
@@ -156,7 +148,7 @@ def run_simulation_with_policies(
         # if step > 500:
         #     active_agent_1 = list(env.active_agents).index(1)
         #     print(env.action_masks[f"agent_{active_agent_1}"])
-        if output_file_prefix is not None:
+        if output_file_prefix not in ["sensitivity", "calibration"]:
             log.log_observation(
                 {
                     a: obs if env.active_agents[env.agent_to_id[a]] == 1 else None
@@ -185,7 +177,7 @@ def run_simulation_with_policies(
             print(f"Simulation ended at step {step}")
             break
 
-    if output_file_prefix is not None:
+    if output_file_prefix not in ["sensitivity", "calibration"]:
         env.area.save(f"log/{output_file_prefix}_area.pickle")
 
     log.log_projects(env.projects.values())
@@ -197,8 +189,7 @@ def run_simulation_with_policies(
         or {"careerist": 1 / 3, "orthodox_scientist": 1 / 3, "mass_producer": 1 / 3},
     }
 
-    if output_file_prefix is not None:
-
+    if output_file_prefix not in ["sensitivity", "calibration"]:
         with open(output_file_prefix + "_summary.json", "w") as f:
             json.dump(results, f, indent=2)
 

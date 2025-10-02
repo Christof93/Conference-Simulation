@@ -229,27 +229,30 @@ def sensitivity_analysis(problem):
     # --- Step 3: Run simulation and collect outputs ---
     def run_model(params):
         acceptance, novelty, prestige, effort, rewardless, group_align = params
-        sim_run = run_simulation_with_policies(
-            n_agents=400,
-            start_agents=100,
-            max_steps=400,
-            n_groups=10,
-            max_peer_group_size=100,
-            max_rewardless_steps=rewardless,
-            policy_distribution={
-                "careerist": 1 / 3,
-                "orthodox_scientist": 1 / 3,
-                "mass_producer": 1 / 3,
-            },
-            output_file_prefix=None,
-            group_policy_homogenous=group_align,
-            acceptance_threshold=acceptance,
-            novelty_threshold=novelty,
-            prestige_threshold=prestige,
-            effort_threshold=effort,
-        )
-
-        with open("log/calibration_projects.json", "r") as f:
+        try:
+            sim_run = run_simulation_with_policies(
+                n_agents=400,
+                start_agents=100,
+                max_steps=400,
+                n_groups=10,
+                max_peer_group_size=100,
+                max_rewardless_steps=rewardless,
+                policy_distribution={
+                    "careerist": 1 / 3,
+                    "orthodox_scientist": 1 / 3,
+                    "mass_producer": 1 / 3,
+                },
+                output_file_prefix="sensitivity",
+                group_policy_homogenous=group_align,
+                acceptance_threshold=acceptance,
+                novelty_threshold=novelty,
+                prestige_threshold=prestige,
+                effort_threshold=effort,
+            )
+        except Exception as e:
+            print(e)
+            return [np.nan] * 5
+        with open("log/sensitivity_projects.json", "r") as f:
             run_projects = json.load(f)
         sim_data = build_stats(run_projects)
 
@@ -333,7 +336,7 @@ def calibrate(problem, real_data):
                     "orthodox_scientist": 1 / 3,  # theta[4][1],
                     "mass_producer": 1 / 3,  # theta[4][2],
                 },
-                output_file_prefix=None,
+                output_file_prefix="calibration",
                 group_policy_homogenous=bool(
                     theta[names.index("policy_aligned_in_group")]
                 ),
