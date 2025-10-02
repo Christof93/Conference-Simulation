@@ -574,6 +574,36 @@ class PeerGroupEnvironment(ParallelEnv):
             self.distances = np.array(distances_between)
         return self.distances
 
+    def _distribute_rewards_evenly(self, p, reward):
+        for idx in p.contributors:
+            self._remove_active_project(idx, p.project_id)
+            if reward > 0:
+                self.agent_successful_projects[idx].append(p.project_id)
+            self.agent_rewards[idx] += reward / len(p.contributors)
+            self.agent_completed_projects[idx] += 1
+            self.rewards[f"agent_{idx}"] += reward / len(p.contributors)
+    
+    def _distribute_rewards_multiply(self, p, reward):
+        for idx in p.contributors:
+            self._remove_active_project(idx, p.project_id)
+            if reward > 0:
+                self.agent_successful_projects[idx].append(p.project_id)
+            self.agent_rewards[idx] += reward
+            self.agent_completed_projects[idx] += 1
+            self.rewards[f"agent_{idx}"] += reward
+    
+    def _distribute_rewards_by_effort(self, p, reward):
+        max_effort = max([self.agent_project_effort[c][p.project_id] for c in p.contributors])
+        for idx in p.contributors:
+            effort = self.agent_project_effort[idx][p.project_id]
+            rel_effort = effort/max_effort if max_effort > 0 else 1/len(p.contributors)
+            self._remove_active_project(idx, p.project_id)
+            if reward > 0:
+                self.agent_successful_projects[idx].append(p.project_id)
+            self.agent_rewards[idx] += reward * rel_effort
+            self.agent_completed_projects[idx] += 1
+            self.rewards[f"agent_{idx}"] += reward * rel_effort
+    
     def step(self, actions: Dict[str, Dict[str, Any]]) -> Tuple[
         Dict[str, Dict[str, Any]],
         Dict[str, float],
@@ -722,13 +752,7 @@ class PeerGroupEnvironment(ParallelEnv):
             )
             if reward > 0 and distances is not None:
                 new_distances.append(distances)
-            for idx in p.contributors:
-                self._remove_active_project(idx, p.project_id)
-                if reward > 0:
-                    self.agent_successful_projects[idx].append(p.project_id)
-                self.agent_rewards[idx] += reward
-                self.agent_completed_projects[idx] += 1
-                self.rewards[f"agent_{idx}"] += reward
+            self._distribute_rewards_multiply(p, reward)
             p.finished = True
 
         new_projects = [p for p in due_projects if p.final_reward > 0]

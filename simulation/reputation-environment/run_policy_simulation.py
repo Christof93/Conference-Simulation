@@ -275,7 +275,7 @@ if __name__ == "__main__":
             "orthodox_scientist": 1 / 3,  # theta[4][1],
             "mass_producer": 1 / 3,  # theta[4][2],
         },
-        output_file_prefix="balanced",
+        output_file_prefix="balanced_multiply",
         group_policy_homogenous=False,
         acceptance_threshold=0.68,
         novelty_threshold=0.31,
