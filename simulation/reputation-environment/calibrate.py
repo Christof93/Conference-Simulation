@@ -19,6 +19,16 @@ PASSWORD = "openreview"
 
 driver = GraphDatabase.driver(URI, auth=(USER, PASSWORD))
 
+def truncate_right_tail(data, quantile=0.99, max_value=None):
+    """
+    Truncate values above a quantile or a fixed max_value.
+    Returns the truncated array.
+    """
+    if max_value is None:
+        cutoff = np.quantile(data, quantile)
+    else:
+        cutoff = max_value
+    return data[data <= cutoff]
 
 def get_collaborators_per_author_or():
     # --- Query for coauthors ---
@@ -188,11 +198,11 @@ def build_stats(projects):
         papers_per_author.append(contributor_papers[c])
 
     return {
-        "papers_per_author": papers_per_author,
-        "authors_per_paper": authors_per_paper,
-        "lifespan": author_lifespan,
-        "quality": quality_scores,
-        "acceptance": acceptances,
+        "papers_per_author": np.array(papers_per_author),
+        "authors_per_paper": np.array(authors_per_paper),
+        "lifespan": np.array(author_lifespan)/52,
+        "quality": np.array(quality_scores)*10,
+        "acceptance": np.array(acceptances),
     }
 
 
@@ -295,12 +305,6 @@ def sensitivity_analysis(problem):
 
 
 def calibrate(problem, real_data):
-    H_real_papers_per_author = real_data["papers_per_author"]
-    H_real_authors_per_paper = real_data["authors_per_paper"]
-    H_real_lifespan = real_data["lifespan"]
-    H_real_quality = real_data["quality"]
-    real_acceptance_rate = real_data["acceptance"].mean()
-
     # Bounds: adjust for your parameter ranges
     # np.random.seed(42)
     # grid_props = generate_proportions(step=0.2)
@@ -325,11 +329,14 @@ def calibrate(problem, real_data):
         print(theta)
         try:
             sim_run = run_simulation_with_policies(
-                n_agents=1_200,
+                n_agents=2_000,
+                # n_agents=600,
                 start_agents=200,
+                # start_agents=60,
                 max_steps=600,
-                # max_steps=10,
+                # max_steps=120,
                 n_groups=20,
+                # n_groups=6,
                 max_peer_group_size=300,
                 max_rewardless_steps=theta[names.index("max_rewardless_steps")],
                 policy_distribution={
@@ -353,22 +360,39 @@ def calibrate(problem, real_data):
         with open("log/calibration_projects.json", "r") as f:
             run_projects = json.load(f)
         sim_data = build_stats(run_projects)
+        n_bins_ppa = 200
+        n_bins_app = 20
+        n_bins_ls = 50
+        n_bins_q = 10
         # Extract histograms (same bins as real)
         H_sim1 = np.histogram(
-            sim_data["papers_per_author"], bins=len(H_real_papers_per_author)
+            sim_data["papers_per_author"], bins=n_bins_ppa
         )[0]
         H_sim2 = np.histogram(
-            sim_data["authors_per_paper"], bins=len(H_real_authors_per_paper)
+            sim_data["authors_per_paper"], bins=n_bins_app
         )[0]
-        H_sim3 = np.histogram(sim_data["lifespan"], bins=len(H_real_lifespan))[0]
-        H_sim4 = np.histogram(sim_data["quality"], bins=len(H_real_quality))[0]
+        H_sim3 = np.histogram(sim_data["lifespan"], bins=n_bins_ls)[0]
+        H_sim4 = np.histogram(sim_data["quality"], bins=n_bins_q)[0]
         # Normalize
         H_sim1 = H_sim1 / H_sim1.sum()
         H_sim2 = H_sim2 / H_sim2.sum()
         H_sim3 = H_sim3 / H_sim3.sum()
         H_sim4 = H_sim4 / H_sim4.sum()
         sim_acceptance_rate = np.array(sim_data["acceptance"]).mean()
-
+        # Normalize real data histograms
+        H_real_papers_per_author = np.histogram(truncate_right_tail(real_data["papers_per_author"], max_value = n_bins_ppa), bins=n_bins_ppa)[0]
+        H_real_authors_per_paper = np.histogram(truncate_right_tail(real_data["authors_per_paper"], max_value = n_bins_app), bins=n_bins_app)[0]
+        H_real_lifespan = np.histogram(real_data["lifespan"], bins=n_bins_ls)[0]
+        H_real_quality = np.histogram(real_data["quality"], bins=n_bins_q)[0]
+        real_acceptance_rate = real_data["acceptance"].mean()
+        H_real_papers_per_author = (
+            H_real_papers_per_author / H_real_papers_per_author.sum()
+        )
+        H_real_authors_per_paper = (
+            H_real_authors_per_paper / H_real_authors_per_paper.sum()
+        )
+        H_real_lifespan = H_real_lifespan / H_real_lifespan.sum()
+        H_real_quality = H_real_quality / H_real_quality.sum()
         # Distances
         d1 = wasserstein_distance(H_real_papers_per_author, H_sim1)
         d2 = wasserstein_distance(H_real_authors_per_paper, H_sim2)
@@ -379,6 +403,7 @@ def calibrate(problem, real_data):
         return d1 + d2 + d3 + d4 + d5  # weighted sum possible
 
     res = gp_minimize(loss, param_space, n_calls=50, random_state=42)
+    # res = gp_minimize(loss, param_space, n_calls=10, random_state=42)
     print("Best parameters:", res.x)
 
 
@@ -440,22 +465,12 @@ def main():
     }
     # sensitivity_analysis(problem)
     real_data = {
-        "papers_per_author": np.histogram(np.load("papers_per_author.npy"), 200)[0],
-        "authors_per_paper": np.histogram(np.load("authors_per_paper.npy"), 200)[0],
-        "lifespan": np.histogram(np.load("author_lifespan.npy"), 200)[0],
-        "quality": np.histogram(np.load("quality_histogram.npy"), 10)[0],
+        "papers_per_author": np.load("papers_per_author.npy"),
+        "authors_per_paper": np.load("authors_per_paper.npy"),
+        "lifespan": np.load("author_lifespan.npy"),
+        "quality": np.load("quality_histogram.npy"),
         "acceptance": np.load("acceptance_histogram.npy"),
     }
-    # Normalize real data histograms
-    real_data["papers_per_author"] = (
-        real_data["papers_per_author"] / real_data["papers_per_author"].sum()
-    )
-    real_data["authors_per_paper"] = (
-        real_data["authors_per_paper"] / real_data["authors_per_paper"].sum()
-    )
-    real_data["lifespan"] = real_data["lifespan"] / real_data["lifespan"].sum()
-    real_data["quality"] = real_data["quality"] / real_data["quality"].sum()
-    real_data["acceptance"] = real_data["acceptance"].mean()
 
     calibrate(problem, real_data)
 

@@ -10,6 +10,7 @@ from gymnasium.spaces import Discrete, MultiBinary
 from pettingzoo import ParallelEnv
 from scipy.special import softmax
 from scipy.stats import norm
+from scipy.special import expit
 
 from .area import Area
 from .project import Project
@@ -22,7 +23,7 @@ def sigmoid(x, midpoint=0.0, sharpness=1.0):
     - midpoint: the x-value where sigmoid = 0.5
     - sharpness: controls steepness (higher = steeper)
     """
-    return 1.0 / (1.0 + np.exp(-sharpness * (x - midpoint)))
+    return expit(sharpness * (x - midpoint))
 
 
 class GaussianMixture:
@@ -108,7 +109,6 @@ class PeerGroupEnvironment(ParallelEnv):
         self.timestep: int = 0
         self.agent_steps = np.zeros(self.n_agents, dtype=np.int32)
         self.agent_ages = self.age_distribution.sample(self.n_agents)
-        print(self.agent_ages)
         self.rewardless_steps = np.zeros(self.n_agents, dtype=np.int32)
         self.agent_rewards = np.zeros(self.n_agents, dtype=np.float32)
         self.agent_completed_projects = np.zeros(self.n_agents, dtype=np.int32)
@@ -762,25 +762,22 @@ class PeerGroupEnvironment(ParallelEnv):
 
             # Probability of termination becomes higher nearing the max value
             rewardless_dist = self.rewardless_steps[idx] - self.max_rewardless_steps
-            age_dist = self.agent_steps[idx] - self.max_agent_age
+            age_dist = self.agent_steps[idx] - self.agent_ages[idx]
             rewardless_prob = sigmoid(
                 rewardless_dist,
                 midpoint=self.max_rewardless_steps * 0.5,
                 sharpness=1 / (self.max_rewardless_steps * 0.0625),
             )
-            # age_prob = sigmoid(
-            #     age_dist,
-            #     midpoint=self.max_agent_age * 0.5,
-            #     # TODO: set this sharpness as parameter?
-            #     sharpness=1 / (self.max_agent_age * 0.0625),
-            # )
-
-            # termination_prob = min(rewardless_prob, age_prob)
-            # Stochastic decision
-            terminations[a] = (
-                np.random.rand() < rewardless_prob
-                or self.agent_steps[idx] > self.agent_ages[idx]
+            age_prob = sigmoid(
+                age_dist,
+                midpoint=self.agent_ages[idx] * 0.5,
+                # TODO: set this sharpness as parameter?
+                sharpness=1 / (self.agent_ages[idx] * 0.0625),
             )
+
+            termination_prob = np.mean([rewardless_prob, age_prob])
+            # Stochastic decision
+            terminations[a] = np.random.rand() < termination_prob
 
         self.terminated_agents = self.terminated_agents | np.fromiter(
             terminations.values(), dtype=bool
