@@ -319,11 +319,11 @@ def calibrate(problem, real_data):
     bounds = problem["bounds"]
     param_space = [
         Real(*bounds[0], name=names[0]),
-        Real(*bounds[1], name=names[1]),
-        Real(*bounds[2], name=names[2]),
+        # Real(*bounds[1], name=names[1]),
+        # Real(*bounds[2], name=names[2]),
         Integer(*bounds[3], name=names[3]),
         Integer(*bounds[4], name=names[4]),
-        Categorical(bounds[5], name=names[5]),  # Boolean
+        # Categorical(bounds[5], name=names[5]),  # Boolean
         # Categorical(candidates, name="policy_population_proportions"),
     ]
 
@@ -341,20 +341,21 @@ def calibrate(problem, real_data):
                 n_groups=20,
                 # n_groups=6,
                 max_peer_group_size=300,
-                max_rewardless_steps=theta[names.index("max_rewardless_steps")],
+                max_rewardless_steps=theta[2],#theta[names.index("max_rewardless_steps")],
                 policy_distribution={
                     "careerist": 1 / 3,  # theta[4][0],
                     "orthodox_scientist": 1 / 3,  # theta[4][1],
                     "mass_producer": 1 / 3,  # theta[4][2],
                 },
                 output_file_prefix="calibration",
-                group_policy_homogenous=bool(
-                    theta[names.index("policy_aligned_in_group")]
-                ),
-                acceptance_threshold=theta[names.index("acceptance_threshold")],
-                novelty_threshold=theta[names.index("orthodox_novelty_threshold")],
-                prestige_threshold=theta[names.index("careerist_prestige_threshold")],
-                effort_threshold=theta[names.index("mass_producer_effort_threshold")],
+                group_policy_homogenous = 0,
+                # bool(
+                #     theta[names.index("policy_aligned_in_group")]
+                # ),
+                acceptance_threshold=theta[0],#theta[names.index("acceptance_threshold")],
+                novelty_threshold = 0.4, #theta[names.index("orthodox_novelty_threshold")],
+                prestige_threshold = 0.29, #theta[names.index("careerist_prestige_threshold")],
+                effort_threshold=theta[1],#theta[names.index("mass_producer_effort_threshold")],
             )
         except Exception as e:
             print(e)
@@ -403,7 +404,7 @@ def calibrate(problem, real_data):
         d4 = wasserstein_distance(H_real_quality, H_sim4)
         d5 = np.abs(real_acceptance_rate - sim_acceptance_rate)
         print(d1, d2, d3, d4, d5)
-        return d1 + d2 + d3 + d4 + d5  # weighted sum possible
+        return d1 + d2 + d3 + d4 + (d5 * .1)  # weighted sum possible
 
     res = gp_minimize(loss, param_space, n_calls=50, random_state=42)
     # res = gp_minimize(loss, param_space, n_calls=10, random_state=42)
@@ -466,16 +467,16 @@ def main():
             [0, 1],  # Boolean → treat as 0/1
         ],
     }
-    sensitivity_analysis(problem)
-    # real_data = {
-    #     "papers_per_author": np.load("papers_per_author.npy"),
-    #     "authors_per_paper": np.load("authors_per_paper.npy"),
-    #     "lifespan": np.load("author_lifespan.npy"),
-    #     "quality": np.load("quality_histogram.npy"),
-    #     "acceptance": np.load("acceptance_histogram.npy"),
-    # }
+    # sensitivity_analysis(problem)
+    real_data = {
+        "papers_per_author": np.load("papers_per_author.npy"),
+        "authors_per_paper": np.load("authors_per_paper.npy"),
+        "lifespan": np.load("author_lifespan.npy"),
+        "quality": np.load("quality_histogram.npy"),
+        "acceptance": np.load("acceptance_histogram.npy"),
+    }
 
-    # calibrate(problem, real_data)
+    calibrate(problem, real_data)
 
 
 if __name__ == "__main__":
