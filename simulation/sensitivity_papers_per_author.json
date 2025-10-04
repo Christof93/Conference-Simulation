@@ -1,18 +1,18 @@
 {
   "S1": {
-    "acceptance_threshold": -0.004774917619857817,
-    "orthodox_novelty_threshold": 0.13981919254199748,
-    "careerist_prestige_threshold": -0.012854119554992195,
-    "mass_producer_effort_threshold": 0.6658823567744506,
-    "max_rewardless_steps": -0.01256354408978949,
-    "policy_aligned_in_group": -0.010822285332932011
+    "acceptance_threshold": -0.001516972408331038,
+    "orthodox_novelty_threshold": 5.753171427455532e-17,
+    "careerist_prestige_threshold": 0.07176636045448086,
+    "mass_producer_effort_threshold": 0.08818679145901152,
+    "max_rewardless_steps": 0.2675387598280166,
+    "policy_aligned_in_group": 2.6613582521093738e-17
   },
   "ST": {
-    "acceptance_threshold": 0.018870361558947803,
-    "orthodox_novelty_threshold": 0.1987261155331841,
-    "careerist_prestige_threshold": 0.09677016168961447,
-    "mass_producer_effort_threshold": 0.6913864083692698,
-    "max_rewardless_steps": 0.04958457178079102,
-    "policy_aligned_in_group": 0.010860344732692666
+    "acceptance_threshold": 0.0008331415344532447,
+    "orthodox_novelty_threshold": 9.76846917368158e-32,
+    "careerist_prestige_threshold": 0.07152640641437473,
+    "mass_producer_effort_threshold": 1.1980344813693573,
+    "max_rewardless_steps": 0.9281337515007239,
+    "policy_aligned_in_group": 5.460734406926918e-31
   }
 }
