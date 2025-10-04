@@ -550,8 +550,22 @@ class PeerGroupEnvironment(ParallelEnv):
             return new_kene
 
         n_cited = min(len(projects_in_vicinity), np.random.randint(10, 21))
+        n_citations_vicinity = np.array(
+            [len(self.projects[p].citations) + 1 for p in projects_in_vicinity]
+        ).sum()
+        sv_exp = np.exp(
+            [self.projects[p].societal_value_score for p in projects_in_vicinity]
+        )
+        societal_value_vicinity_probs = sv_exp / sv_exp.sum()
+        citation_popularity = [
+            0.6 * ((len(self.projects[p].citations) + 1) / n_citations_vicinity)
+            + 0.4 * psv
+            for p, psv in zip(projects_in_vicinity, societal_value_vicinity_probs)
+        ]
         # weighted by n citations?
-        cited_projects = np.random.choice(projects_in_vicinity, n_cited)
+        cited_projects = np.random.choice(
+            projects_in_vicinity, n_cited, p=citation_popularity
+        )
         m = 0
         for cited_project in cited_projects:
             cited_project = self.projects[cited_project]
@@ -609,7 +623,7 @@ class PeerGroupEnvironment(ParallelEnv):
             self.agent_completed_projects[idx] += 1
             self.rewards[f"agent_{idx}"] += reward
 
-    def _distribute_rewards_by_effort(self, p, reward):
+    def _distribute_rewards_multiply(self, p, reward):
         max_effort = max(
             [self.agent_project_effort[c][p.project_id] for c in p.contributors]
         )
@@ -773,7 +787,7 @@ class PeerGroupEnvironment(ParallelEnv):
             )
             if reward > 0 and distances is not None:
                 new_distances.append(distances)
-            self._distribute_rewards_evenly(p, reward)
+            self._distribute_rewards_by_effort(p, reward)
             p.finished = True
 
         new_projects = [p for p in due_projects if p.final_reward > 0]

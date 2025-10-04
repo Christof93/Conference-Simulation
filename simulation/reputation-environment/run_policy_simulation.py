@@ -292,19 +292,39 @@ if __name__ == "__main__":
         max_steps=600,
         n_groups=20,
         max_peer_group_size=100,
-        max_rewardless_steps=251,
+        max_rewardless_steps=50,
         policy_distribution={
             "careerist": 1 / 3,  # theta[4][0],
             "orthodox_scientist": 1 / 3,  # theta[4][1],
             "mass_producer": 1 / 3,  # theta[4][2],
         },
-        output_file_prefix="balanced_evenly",
+        output_file_prefix="balanced_multiply",
         group_policy_homogenous=False,
-        acceptance_threshold=0.68,
-        novelty_threshold=0.31,
-        prestige_threshold=0.67,
-        effort_threshold=34,
+        acceptance_threshold=0.53,
+        novelty_threshold=0.4,
+        prestige_threshold=0.29,
+        effort_threshold=21,
     )
+    #### version with good results...
+    # run_simulation_with_policies(
+    #     n_agents=1200,
+    #     start_agents=200,
+    #     max_steps=600,
+    #     n_groups=20,
+    #     max_peer_group_size=100,
+    #     max_rewardless_steps=251,
+    #     policy_distribution={
+    #         "careerist": 1 / 3,  # theta[4][0],
+    #         "orthodox_scientist": 1 / 3,  # theta[4][1],
+    #         "mass_producer": 1 / 3,  # theta[4][2],
+    #     },
+    #     output_file_prefix="balanced_multiply",
+    #     group_policy_homogenous=False,
+    #     acceptance_threshold=0.68,
+    #     novelty_threshold=0.31,
+    #     prestige_threshold=0.67,
+    #     effort_threshold=34,
+    # )
 
     # Compare different policy distributions
     # print("\n" + "=" * 80)
