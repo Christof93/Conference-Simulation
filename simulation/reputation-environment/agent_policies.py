@@ -298,8 +298,10 @@ def get_policy_function(policy_name: str):
 
 
 def create_mixed_policy_population(
-    n_agents: int, policy_distribution: Dict[str, float] = None
+    n_agents: int, policy_distribution: Dict[str, float] = None, seed=None
 ) -> List[str]:
+    if seed is not None:
+        np.random.seed(seed)
     if policy_distribution is None:
         policy_distribution = {
             "careerist": 1 / 3,

@@ -10,6 +10,20 @@ class Area:
         self.ylim = ylim
         self.areas = []  # list of (x0, y0, sigma, value)
 
+    @staticmethod
+    def seed(seed: int):
+        if seed is not None:
+            np.random.seed(seed)
+
+    @staticmethod
+    def distance(p1, p2):
+        """
+        Compute Euclidean distance between two points p1=(x1,y1) and p2=(x2,y2).
+        """
+        p1 = np.array(p1)
+        p2 = np.array(p2)
+        return np.linalg.norm(p2 - p1, axis=1)
+
     def random_point(self):
         x = np.random.uniform(*self.xlim)
         y = np.random.uniform(*self.ylim)
@@ -33,15 +47,6 @@ class Area:
         Define a Gaussian region centered at (x0,y0) with std=sigma and value scaling.
         """
         self.areas.append((x0, y0, sigma, value))
-
-    @staticmethod
-    def distance(p1, p2):
-        """
-        Compute Euclidean distance between two points p1=(x1,y1) and p2=(x2,y2).
-        """
-        p1 = np.array(p1)
-        p2 = np.array(p2)
-        return np.linalg.norm(p2 - p1, axis=1)
 
     def value_at(self, x, y):
         """

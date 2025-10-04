@@ -66,6 +66,7 @@ def run_simulation_with_policies(
     novelty_threshold: float = 0.4,
     prestige_threshold: float = 0.6,
     effort_threshold: int = 22,
+    seed=42,
 ):
     """
     Run a simulation with different agent policies.
@@ -80,6 +81,7 @@ def run_simulation_with_policies(
     # Create environment
     env = PeerGroupEnvironment(
         start_agents=start_agents,
+        max_steps=max_steps,
         max_agents=n_agents,
         n_groups=n_groups,
         max_peer_group_size=max_peer_group_size,
@@ -95,7 +97,9 @@ def run_simulation_with_policies(
             n_agents, policy_distribution
         )
     else:
-        agent_policies = create_mixed_policy_population(n_agents, policy_distribution)
+        agent_policies = create_mixed_policy_population(
+            n_agents, policy_distribution, seed=seed
+        )
     print(
         f"Agent policy distribution: {dict(zip(*np.unique(agent_policies, return_counts=True)))}"
     )
@@ -112,7 +116,7 @@ def run_simulation_with_policies(
     log.start()
 
     # Reset environment
-    observations, infos = env.reset(seed=42)
+    observations, infos = env.reset(seed=seed)
 
     # Simulation loop
     for step in range(max_steps):
@@ -245,7 +249,7 @@ if __name__ == "__main__":
     # Run a single simulation with balanced policies
     print("Running single simulation with balanced policies...")
     # run_simulation_with_policies(
-    #     n_agents=2_400,
+    #     n_agents=10_000,
     #     start_agents=400,
     #     max_steps=1_200,
     #     n_groups=40,
@@ -263,6 +267,25 @@ if __name__ == "__main__":
     #     prestige_threshold=0.8,
     #     effort_threshold=41,
     # )
+    # run_simulation_with_policies(
+    #     n_agents=10_000,
+    #     start_agents=500,
+    #     max_steps=2_400,
+    #     n_groups=50,
+    #     max_peer_group_size=500,
+    #     max_rewardless_steps=251,
+    #     policy_distribution={
+    #         "careerist": 1 / 3,  # theta[4][0],
+    #         "orthodox_scientist": 1 / 3,  # theta[4][1],
+    #         "mass_producer": 1 / 3,  # theta[4][2],
+    #     },
+    #     output_file_prefix="balanced_by_effort_long_run",
+    #     group_policy_homogenous=False,
+    #     acceptance_threshold=0.68,
+    #     novelty_threshold=0.31,
+    #     prestige_threshold=0.67,
+    #     effort_threshold=34,
+    # )
     run_simulation_with_policies(
         n_agents=1200,
         start_agents=200,
@@ -275,7 +298,7 @@ if __name__ == "__main__":
             "orthodox_scientist": 1 / 3,  # theta[4][1],
             "mass_producer": 1 / 3,  # theta[4][2],
         },
-        output_file_prefix="balanced_multiply",
+        output_file_prefix="balanced_evenly",
         group_policy_homogenous=False,
         acceptance_threshold=0.68,
         novelty_threshold=0.31,

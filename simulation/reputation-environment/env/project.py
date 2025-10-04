@@ -45,6 +45,11 @@ class Project:
         self.novelty_score = 0.0
         self.societal_value_score = 0.0
 
+    @staticmethod
+    def seed(seed: int):
+        if seed is not None:
+            np.random.seed(seed)
+
     def add_contributor(self, agent_id: int) -> bool:
         """Add an agent as a contributor to the project."""
         if agent_id not in self.contributors:

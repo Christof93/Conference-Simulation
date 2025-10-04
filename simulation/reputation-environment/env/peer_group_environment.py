@@ -8,9 +8,8 @@ from gymnasium.spaces import Box
 from gymnasium.spaces import Dict as GymDict
 from gymnasium.spaces import Discrete, MultiBinary
 from pettingzoo import ParallelEnv
-from scipy.special import softmax
+from scipy.special import expit, softmax
 from scipy.stats import norm
-from scipy.special import expit
 
 from .area import Area
 from .project import Project
@@ -72,6 +71,7 @@ class PeerGroupEnvironment(ParallelEnv):
         self,
         start_agents: int = 20,
         max_agents: int = 80,
+        max_steps: int = 600,
         max_peer_group_size: int = 60,
         n_groups: int = 4,
         n_projects_per_step: int = 1,
@@ -83,6 +83,7 @@ class PeerGroupEnvironment(ParallelEnv):
         render_mode: Optional[str] = None,
     ) -> None:
         self.n_agents: int = max_agents
+        self.n_steps: int = max_steps
         self.starting_population_size: int = start_agents
         self.n_groups: int = n_groups
         self.max_peer_group_size: int = max_peer_group_size
@@ -93,6 +94,7 @@ class PeerGroupEnvironment(ParallelEnv):
             weights=[0.5, 0.5],
             mus=[52, self.max_agent_age],
             sds=[52, self.max_agent_age / 4],
+            rng=np.random,
         )
         self.max_rewardless_steps: int = max_rewardless_steps
         self.growth_rate: float = growth_rate
@@ -110,7 +112,9 @@ class PeerGroupEnvironment(ParallelEnv):
         self.agent_steps = np.zeros(self.n_agents, dtype=np.int32)
         self.agent_ages = self.age_distribution.sample(self.n_agents)
         self.rewardless_steps = np.zeros(self.n_agents, dtype=np.int32)
-        self.agent_rewards = np.zeros(self.n_agents, dtype=np.float32)
+        self.agent_rewards = np.zeros(
+            (self.n_agents, self.n_steps + 1), dtype=np.float32
+        )
         self.agent_completed_projects = np.zeros(self.n_agents, dtype=np.int32)
         self.agent_successful_projects: List[List[str]] = [
             [] for _ in range(self.n_agents)
@@ -227,6 +231,7 @@ class PeerGroupEnvironment(ParallelEnv):
         for agent_i, active in zip(group, active_in_group):
             if active == 0 and self.terminated_agents[agent_i] == 0:
                 self.active_agents[agent_i] = 1
+                self.agent_rewards[agent_i, self.timestep :] = 0
                 return agent_i
         return None
 
@@ -273,13 +278,19 @@ class PeerGroupEnvironment(ParallelEnv):
     ) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]]]:
         if seed is not None:
             np.random.seed(seed)
+            Area.seed(seed)
+            Project.seed(seed)
 
         # Reset state variables
         self.timestep = 0
         self.agent_steps = np.zeros(self.n_agents, dtype=np.int32)
         self.agent_ages = self.age_distribution.sample(self.n_agents)
         self.rewardless_steps = np.zeros(self.n_agents, dtype=np.int32)
-        self.agent_rewards = np.zeros(self.n_agents, dtype=np.float32)
+        self.agent_rewards = np.zeros(
+            (self.n_agents, self.n_steps + 1), dtype=np.float32
+        )
+        self.agent_rewards.fill(np.nan)
+        self.agent_rewards[: self.starting_population_size, :] = 0
         self.agent_completed_projects = np.zeros(self.n_agents, dtype=np.int32)
         self.agent_successful_projects = [[] for _ in range(self.n_agents)]
         self.agent_active_projects = [
@@ -358,7 +369,7 @@ class PeerGroupEnvironment(ParallelEnv):
         peer_group = self.peer_groups[self.agent_peer_idx[idx]]
         mask["collaborate_with"] = np.zeros(self.max_peer_group_size, dtype=np.int8)
         mask["collaborate_with"][: len(peer_group)] = np.where(
-            self.active_agents[peer_group],
+            self.active_agents[peer_group].astype(bool),
             2,  ## if active unmask
             mask["collaborate_with"][: len(peer_group)],  # else keep 0
         )
@@ -478,15 +489,21 @@ class PeerGroupEnvironment(ParallelEnv):
         # select a random generator project from all authors in peer group
         all_contributors_projects = []
         probabilities = []
-        max_reputation = np.max(
-            [self.agent_rewards[agent_i] for agent_i in new_project.contributors]
-        ) or 1
+        max_reputation = (
+            np.max(
+                [
+                    np.nansum(self.agent_rewards[agent_i, :])
+                    for agent_i in new_project.contributors
+                ]
+            )
+            or 1
+        )
         # choose weighted by contributor reputation
         for agent_i in new_project.contributors:
             all_contributors_projects += self.agent_successful_projects[agent_i]
             probabilities += [
                 0.5 * self.projects[pid].societal_value_score
-                + 0.5 * self.agent_rewards[agent_i] / max_reputation
+                + 0.5 * np.nansum(self.agent_rewards[agent_i, :]) / max_reputation
                 for pid in self.agent_successful_projects[agent_i]
             ]
         generator_project = None
@@ -579,31 +596,35 @@ class PeerGroupEnvironment(ParallelEnv):
             self._remove_active_project(idx, p.project_id)
             if reward > 0:
                 self.agent_successful_projects[idx].append(p.project_id)
-            self.agent_rewards[idx] += reward / len(p.contributors)
+            self.agent_rewards[idx, self.timestep] += reward / len(p.contributors)
             self.agent_completed_projects[idx] += 1
             self.rewards[f"agent_{idx}"] += reward / len(p.contributors)
-    
+
     def _distribute_rewards_multiply(self, p, reward):
         for idx in p.contributors:
             self._remove_active_project(idx, p.project_id)
             if reward > 0:
                 self.agent_successful_projects[idx].append(p.project_id)
-            self.agent_rewards[idx] += reward
+            self.agent_rewards[idx, self.timestep] += reward
             self.agent_completed_projects[idx] += 1
             self.rewards[f"agent_{idx}"] += reward
-    
+
     def _distribute_rewards_by_effort(self, p, reward):
-        max_effort = max([self.agent_project_effort[c][p.project_id] for c in p.contributors])
+        max_effort = max(
+            [self.agent_project_effort[c][p.project_id] for c in p.contributors]
+        )
         for idx in p.contributors:
             effort = self.agent_project_effort[idx][p.project_id]
-            rel_effort = effort/max_effort if max_effort > 0 else 1/len(p.contributors)
+            rel_effort = (
+                effort / max_effort if max_effort > 0 else 1 / len(p.contributors)
+            )
             self._remove_active_project(idx, p.project_id)
             if reward > 0:
                 self.agent_successful_projects[idx].append(p.project_id)
-            self.agent_rewards[idx] += reward * rel_effort
+            self.agent_rewards[idx, self.timestep] += reward * rel_effort
             self.agent_completed_projects[idx] += 1
             self.rewards[f"agent_{idx}"] += reward * rel_effort
-    
+
     def step(self, actions: Dict[str, Dict[str, Any]]) -> Tuple[
         Dict[str, Dict[str, Any]],
         Dict[str, float],
@@ -752,7 +773,7 @@ class PeerGroupEnvironment(ParallelEnv):
             )
             if reward > 0 and distances is not None:
                 new_distances.append(distances)
-            self._distribute_rewards_multiply(p, reward)
+            self._distribute_rewards_evenly(p, reward)
             p.finished = True
 
         new_projects = [p for p in due_projects if p.final_reward > 0]
@@ -765,14 +786,25 @@ class PeerGroupEnvironment(ParallelEnv):
                 ],
             )
 
+        in_window_rewards = self.agent_rewards[
+            self.active_agents.astype(bool),
+            max(0, self.timestep - self.max_rewardless_steps) : self.timestep,
+        ]
+        per_step_reward_mean = np.nanmean(in_window_rewards, axis=1)
+        cutoff = np.percentile(per_step_reward_mean, 25)
         # Update agent ages, steps, rewardless steps
+        active_idx = 0
         for idx, agent in enumerate(self.agents):
             if self.active_agents[idx] == 1:
                 self.agent_steps[idx] += 1
-                if self.rewards[agent] > 0:
+                if (
+                    self.rewards[agent] > 0
+                    and per_step_reward_mean[active_idx] > cutoff
+                ):
                     self.rewardless_steps[idx] = 0
                 else:
                     self.rewardless_steps[idx] += 1
+                active_idx += 1
 
         truncations = {a: False for a in self.agents}
         # Drop agents randomly way more likely with too many rewardless steps or max timesteps
@@ -864,7 +896,9 @@ class PeerGroupEnvironment(ParallelEnv):
         for i, agent_i in enumerate(peer_group):
             if self.active_agents[agent_i] == 1:
                 peer_group_obs[i] = 1
-                peer_reputation[i] = self.agent_rewards[agent_i].astype(np.float32)
+                peer_reputation[i] = (
+                    self.agent_rewards[agent_i, :].sum().astype(np.float32)
+                )
                 centroids = np.array(
                     [
                         self.projects[pid].kene
@@ -884,7 +918,7 @@ class PeerGroupEnvironment(ParallelEnv):
             "peer_group": peer_group_obs,
             "peer_reputation": peer_reputation,
             "accumulated_rewards": np.array(
-                [self.agent_rewards[idx]], dtype=np.float32
+                [self.agent_rewards[idx, :].sum()], dtype=np.float32
             ),
             "peer_centroids": np.array(peer_centroids, dtype=np.float64),
             "self_centroid": np.array([self_centroid], dtype=np.float64),
