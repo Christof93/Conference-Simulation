@@ -623,7 +623,7 @@ class PeerGroupEnvironment(ParallelEnv):
             self.agent_completed_projects[idx] += 1
             self.rewards[f"agent_{idx}"] += reward
 
-    def _distribute_rewards_multiply(self, p, reward):
+    def _distribute_rewards_by_effort(self, p, reward):
         max_effort = max(
             [self.agent_project_effort[c][p.project_id] for c in p.contributors]
         )
@@ -787,7 +787,7 @@ class PeerGroupEnvironment(ParallelEnv):
             )
             if reward > 0 and distances is not None:
                 new_distances.append(distances)
-            self._distribute_rewards_by_effort(p, reward)
+            self._distribute_rewards_multiply(p, reward)
             p.finished = True
 
         new_projects = [p for p in due_projects if p.final_reward > 0]
