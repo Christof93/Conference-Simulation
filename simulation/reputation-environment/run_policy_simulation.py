@@ -300,10 +300,10 @@ if __name__ == "__main__":
         },
         output_file_prefix="balanced_multiply",
         group_policy_homogenous=False,
-        acceptance_threshold=0.53,
+        acceptance_threshold=0.46,
         novelty_threshold=0.4,
         prestige_threshold=0.29,
-        effort_threshold=21,
+        effort_threshold=35,
     )
     #### version with good results...
     # run_simulation_with_policies(

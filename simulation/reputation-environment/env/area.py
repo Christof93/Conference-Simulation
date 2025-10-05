@@ -1,4 +1,5 @@
 import pickle
+from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -73,25 +74,37 @@ class Area:
     def visualize(self, resolution=200, sampled_points=None, bounds=None):
         """
         Visualize the space as a heatmap.
-        bounds = (xmin, xmax, ymin, ymax) to zoom in on a subarea.
+
+        Parameters
+        ----------
+        resolution : int
+            Resolution of the heatmap grid.
+        sampled_points : list of tuples, optional
+            List of (x, y) or (x, y, category) points.
+            If categories are provided, they will be color-coded.
+        bounds : tuple, optional
+            (xmin, xmax, ymin, ymax) to zoom in on a subarea.
         """
+        # Determine bounds
         if bounds is None:
             xmin, xmax = self.xlim
             ymin, ymax = self.ylim
         else:
             xmin, xmax, ymin, ymax = bounds
 
+        # Create grid
         x = np.linspace(xmin, xmax, resolution)
         y = np.linspace(ymin, ymax, resolution)
         X, Y = np.meshgrid(x, y)
 
-        # Same calculation for Z as before...
+        # Compute field Z
         Z = 0
         for x0, y0, sigma, v in self.areas:
             Z += v * np.exp(-((X - x0) ** 2 + (Y - y0) ** 2) / (2 * sigma**2))
         Z = np.tanh(Z)
 
-        plt.figure(figsize=(32, 32))
+        # Plot heatmap
+        plt.figure(figsize=(10, 10))
         plt.imshow(
             Z,
             extent=(xmin, xmax, ymin, ymax),
@@ -103,7 +116,7 @@ class Area:
         )
         plt.colorbar(label="Value")
 
-        # Plot Gaussian centers that fall inside the bounds
+        # Plot Gaussian centers
         if self.areas:
             cx, cy = zip(
                 *[
@@ -123,21 +136,50 @@ class Area:
                     label="Gaussian Centers",
                 )
 
-        # Plot sampled points if provided
-        if sampled_points is not None:
-            px, py = zip(
-                *[
-                    (px, py)
-                    for (px, py) in sampled_points
-                    if xmin <= px <= xmax and ymin <= py <= ymax
-                ]
-            )
-            if px:
+        # Plot sampled points (optional categories)
+        if sampled_points is not None and len(sampled_points) > 0:
+            # Detect if categories exist
+            has_category = len(sampled_points[0]) == 3
+
+            if has_category:
+                category_points = defaultdict(list)
+                for px, py, cat in sampled_points:
+                    if xmin <= px <= xmax and ymin <= py <= ymax:
+                        category_points[cat].append((px, py))
+
+                cmap = plt.cm.get_cmap("tab10", len(category_points))
+                for i, (cat, pts) in enumerate(category_points.items()):
+                    xs, ys = zip(*pts)
+                    plt.scatter(
+                        xs,
+                        ys,
+                        c=[cmap(i)],
+                        s=10,
+                        edgecolors="white",
+                        label=str(cat),
+                    )
+            else:
+                px, py = zip(
+                    *[
+                        (px, py)
+                        for (px, py) in sampled_points
+                        if xmin <= px <= xmax and ymin <= py <= ymax
+                    ]
+                )
                 plt.scatter(
-                    px, py, c="black", s=20, edgecolors="white", label="Sampled Points"
+                    px,
+                    py,
+                    c="black",
+                    s=10,
+                    edgecolors="white",
+                    label="Sampled Points",
                 )
 
-        plt.legend()
+        plt.legend(
+            title=(
+                "Categories" if sampled_points and len(sampled_points[0]) == 3 else None
+            )
+        )
         plt.title("2D Space (zoomed in)")
         plt.xlabel("X")
         plt.ylabel("Y")

@@ -910,8 +910,8 @@ class PeerGroupEnvironment(ParallelEnv):
         for i, agent_i in enumerate(peer_group):
             if self.active_agents[agent_i] == 1:
                 peer_group_obs[i] = 1
-                peer_reputation[i] = (
-                    self.agent_rewards[agent_i, :].sum().astype(np.float32)
+                peer_reputation[i] = np.nansum(self.agent_rewards[agent_i, :]).astype(
+                    np.float32
                 )
                 centroids = np.array(
                     [
@@ -932,7 +932,7 @@ class PeerGroupEnvironment(ParallelEnv):
             "peer_group": peer_group_obs,
             "peer_reputation": peer_reputation,
             "accumulated_rewards": np.array(
-                [self.agent_rewards[idx, :].sum()], dtype=np.float32
+                [np.nansum(self.agent_rewards[idx, :])], dtype=np.float32
             ),
             "peer_centroids": np.array(peer_centroids, dtype=np.float64),
             "self_centroid": np.array([self_centroid], dtype=np.float64),
