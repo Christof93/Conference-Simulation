@@ -317,46 +317,95 @@ def calibrate(problem, real_data):
     # print(candidates)
     names = problem["names"]
     bounds = problem["bounds"]
-    param_space = [
-        Real(*bounds[0], name=names[0]),
-        # Real(*bounds[1], name=names[1]),
-        # Real(*bounds[2], name=names[2]),
-        Integer(*bounds[3], name=names[3]),
-        Integer(*bounds[4], name=names[4]),
-        # Categorical(bounds[5], name=names[5]),  # Boolean
-        # Categorical(candidates, name="policy_population_proportions"),
-    ]
+    if len(names) == 6:
+        param_space = [
+            Real(*bounds[0], name=names[0]),
+            Real(*bounds[1], name=names[1]),
+            Real(*bounds[2], name=names[2]),
+            Integer(*bounds[3], name=names[3]),
+            Integer(*bounds[4], name=names[4]),
+            Categorical(bounds[5], name=names[5]),  # Boolean
+            # Categorical(candidates, name="policy_population_proportions"),
+        ]
+    else:
+        param_space = [
+            Real(*bounds[0], name=names[0]),
+            # Real(*bounds[1], name=names[1]),
+            # Real(*bounds[2], name=names[2]),
+            Integer(*bounds[3], name=names[3]),
+            Integer(*bounds[4], name=names[4]),
+            # Categorical(bounds[5], name=names[5]),  # Boolean
+            # Categorical(candidates, name="policy_population_proportions"),
+        ]
 
     # ---- Step 2–3: Define loss function ----
     def loss(theta):
-        print(theta)
+        print(list(zip(names, theta)))
         try:
-            sim_run = run_simulation_with_policies(
-                n_agents=2_000,
-                # n_agents=600,
-                start_agents=200,
-                # start_agents=60,
-                max_steps=600,
-                # max_steps=120,
-                n_groups=20,
-                # n_groups=6,
-                max_peer_group_size=300,
-                max_rewardless_steps=theta[2],#theta[names.index("max_rewardless_steps")],
-                policy_distribution={
-                    "careerist": 1 / 3,  # theta[4][0],
-                    "orthodox_scientist": 1 / 3,  # theta[4][1],
-                    "mass_producer": 1 / 3,  # theta[4][2],
-                },
-                output_file_prefix="calibration",
-                group_policy_homogenous = 0,
-                # bool(
-                #     theta[names.index("policy_aligned_in_group")]
-                # ),
-                acceptance_threshold=theta[0],#theta[names.index("acceptance_threshold")],
-                novelty_threshold = 0.4, #theta[names.index("orthodox_novelty_threshold")],
-                prestige_threshold = 0.29, #theta[names.index("careerist_prestige_threshold")],
-                effort_threshold=theta[1],#theta[names.index("mass_producer_effort_threshold")],
-            )
+            if len(names) == 6:
+                sim_run = run_simulation_with_policies(
+                    n_agents=2_000,
+                    # n_agents=600,
+                    start_agents=200,
+                    # start_agents=60,
+                    max_steps=600,
+                    # max_steps=120,
+                    n_groups=20,
+                    # n_groups=6,
+                    max_peer_group_size=300,
+                    # max_rewardless_steps=theta[2],
+                    max_rewardless_steps=theta[names.index("max_rewardless_steps")],
+                    policy_distribution={
+                        "careerist": 1 / 3,  # theta[4][0],
+                        "orthodox_scientist": 1 / 3,  # theta[4][1],
+                        "mass_producer": 1 / 3,  # theta[4][2],
+                    },
+                    output_file_prefix="calibration",
+                    # group_policy_homogenous = 0,
+                    group_policy_homogenous = bool(
+                        theta[names.index("policy_aligned_in_group")]
+                    ),
+                    # acceptance_threshold=theta[0],
+                    acceptance_threshold=theta[names.index("acceptance_threshold")],
+                    # novelty_threshold = 0.4, 
+                    novelty_threshold = theta[names.index("orthodox_novelty_threshold")],
+                    # prestige_threshold = 0.29, 
+                    prestige_threshold = theta[names.index("careerist_prestige_threshold")],
+                    # effort_threshold=theta[1],
+                    effort_threshold=theta[names.index("mass_producer_effort_threshold")],
+                )
+            else:
+                sim_run = run_simulation_with_policies(
+                    n_agents=2_000,
+                    # n_agents=600,
+                    start_agents=200,
+                    # start_agents=60,
+                    max_steps=600,
+                    # max_steps=120,
+                    n_groups=20,
+                    # n_groups=6,
+                    max_peer_group_size=300,
+                    max_rewardless_steps=theta[2],
+                    # max_rewardless_steps=theta[names.index("max_rewardless_steps")],
+                    policy_distribution={
+                        "careerist": 1 / 3,  # theta[4][0],
+                        "orthodox_scientist": 1 / 3,  # theta[4][1],
+                        "mass_producer": 1 / 3,  # theta[4][2],
+                    },
+                    output_file_prefix="calibration",
+                    group_policy_homogenous = 0,
+                    # group_policy_homogenous = bool(
+                    #     theta[names.index("policy_aligned_in_group")]
+                    # ),
+                    acceptance_threshold=theta[0],
+                    # acceptance_threshold=theta[names.index("acceptance_threshold")],
+                    novelty_threshold = 0.4, 
+                    # novelty_threshold = theta[names.index("orthodox_novelty_threshold")],
+                    prestige_threshold = 0.29, 
+                    # prestige_threshold = theta[names.index("careerist_prestige_threshold")],
+                    effort_threshold=theta[1],
+                    # effort_threshold=theta[names.index("mass_producer_effort_threshold")],
+                )
         except Exception as e:
             print(e)
             return 1e6
@@ -364,10 +413,14 @@ def calibrate(problem, real_data):
         with open("log/calibration_projects.json", "r") as f:
             run_projects = json.load(f)
         sim_data = build_stats(run_projects)
-        n_bins_ppa = 200
-        n_bins_app = 20
-        n_bins_ls = 50
-        n_bins_q = 10
+        n_bins_ppa = min(max(sim_data["papers_per_author"]), max(real_data["papers_per_author"])) #200
+        n_bins_ppa = (200 if n_bins_ppa < 200 else n_bins_ppa)
+        n_bins_app = min(max(sim_data["authors_per_paper"]), max(real_data["authors_per_paper"])) #
+        n_bins_app = (5 if n_bins_app < 5 else n_bins_app)
+        n_bins_ls = min(int(max(sim_data["lifespan"])),max(real_data["lifespan"])) #
+        n_bins_ls = (5 if n_bins_ls < 5 else n_bins_ls)
+        n_bins_q = min(int(max(sim_data["quality"])),max(real_data["quality"])) #
+        n_bins_q = (10 if n_bins_q < 10 else n_bins_q)
         # Extract histograms (same bins as real)
         H_sim1 = np.histogram(
             sim_data["papers_per_author"], bins=n_bins_ppa
@@ -385,7 +438,7 @@ def calibrate(problem, real_data):
         sim_acceptance_rate = np.array(sim_data["acceptance"]).mean()
         # Normalize real data histograms
         H_real_papers_per_author = np.histogram(truncate_right_tail(real_data["papers_per_author"], max_value = n_bins_ppa), bins=n_bins_ppa)[0]
-        H_real_authors_per_paper = np.histogram(truncate_right_tail(real_data["authors_per_paper"], max_value = n_bins_app), bins=n_bins_app)[0]
+        H_real_authors_per_paper = np.histogram(truncate_right_tail(real_data["authors_per_paper"][real_data["authors_per_paper"] > 0], max_value = n_bins_app), bins=n_bins_app)[0]
         H_real_lifespan = np.histogram(real_data["lifespan"], bins=n_bins_ls)[0]
         H_real_quality = np.histogram(real_data["quality"], bins=n_bins_q)[0]
         real_acceptance_rate = real_data["acceptance"].mean()
@@ -403,12 +456,16 @@ def calibrate(problem, real_data):
         d3 = wasserstein_distance(H_real_lifespan, H_sim3)
         d4 = wasserstein_distance(H_real_quality, H_sim4)
         d5 = np.abs(real_acceptance_rate - sim_acceptance_rate)
-        print(d1, d2, d3, d4, d5)
+        print((f"PPA dist: {round(d1, 5)}, ",
+               f"APP dist: {round(d2, 5)}, ",
+               f"LS dist: {round(d3, 5)}, ",
+               f"PQ dist: {round(d4, 5)}, ",
+               f"AR dist {round(d5, 5)}"))
         return d1 + d2 + d3 + d4 + (d5 * .1)  # weighted sum possible
 
     res = gp_minimize(loss, param_space, n_calls=50, random_state=42)
     # res = gp_minimize(loss, param_space, n_calls=10, random_state=42)
-    print("Best parameters:", res.x)
+    print("Best parameters:", list(zip(names, res.x)))
 
 
 # --- Build normalized histograms with edges ---
