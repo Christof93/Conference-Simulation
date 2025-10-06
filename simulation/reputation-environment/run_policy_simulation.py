@@ -63,10 +63,11 @@ def run_simulation_with_policies(
     output_file_prefix: str = None,
     group_policy_homogenous=True,
     acceptance_threshold: float = 0.5,
-    novelty_threshold: float = 0.4,
-    prestige_threshold: float = 0.6,
+    novelty_threshold: float = 0.8,
+    prestige_threshold: float = 0.2,
     effort_threshold: int = 22,
     seed=42,
+    reward_function: str = "multiply",
 ):
     """
     Run a simulation with different agent policies.
@@ -90,6 +91,7 @@ def run_simulation_with_policies(
         max_agent_age=750,
         max_rewardless_steps=max_rewardless_steps,
         acceptance_threshold=acceptance_threshold,
+        reward_mode=reward_function
     )
     if group_policy_homogenous:
         # Create agent policy assignments
@@ -244,10 +246,41 @@ def compare_policy_performances():
             f"Rewards: {stats['total_rewards_distributed']:6.2f}"
         )
 
+def run_all_reward_functions():
+    reward_functions = ["multiply", "evenly", "by_effort"]
+    seeds = range(10)  # 0 to 9 inclusive
+
+    for seed in seeds:
+        for reward_fn in reward_functions:
+            print(f"Running simulation for reward function '{reward_fn}' with seed {seed}...")
+
+            run_simulation_with_policies(
+                n_agents=2000,
+                start_agents=200,
+                max_steps=600,
+                n_groups=20,
+                max_peer_group_size=100,
+                max_rewardless_steps=50,
+                policy_distribution={
+                    "careerist": 1 / 3,
+                    "orthodox_scientist": 1 / 3,
+                    "mass_producer": 1 / 3,
+                },
+                output_file_prefix=f"balanced_{reward_fn}_seed{seed}",
+                group_policy_homogenous=False,
+                acceptance_threshold=0.44,
+                novelty_threshold=0.4,
+                prestige_threshold=0.4,
+                effort_threshold=38,
+                seed=seed,
+                reward_function=reward_fn
+            )
+
+    print("All simulations completed.")
 
 if __name__ == "__main__":
     # Run a single simulation with balanced policies
-    print("Running single simulation with balanced policies...")
+    # print("Running single simulation with balanced policies...")
     # run_simulation_with_policies(
     #     n_agents=10_000,
     #     start_agents=400,
@@ -286,25 +319,26 @@ if __name__ == "__main__":
     #     prestige_threshold=0.67,
     #     effort_threshold=34,
     # )
-    run_simulation_with_policies(
-        n_agents=2000,
-        start_agents=200,
-        max_steps=600,
-        n_groups=20,
-        max_peer_group_size=100,
-        max_rewardless_steps=50,
-        policy_distribution={
-            "careerist": 1 / 3,  # theta[4][0],
-            "orthodox_scientist": 1 / 3,  # theta[4][1],
-            "mass_producer": 1 / 3,  # theta[4][2],
-        },
-        output_file_prefix="balanced_multiply",
-        group_policy_homogenous=False,
-        acceptance_threshold=0.46,
-        novelty_threshold=0.4,
-        prestige_threshold=0.29,
-        effort_threshold=35,
-    )
+    # run_simulation_with_policies(
+    #     n_agents=2000,
+    #     start_agents=200,
+    #     max_steps=600,
+    #     n_groups=20,
+    #     max_peer_group_size=100,
+    #     max_rewardless_steps=50,
+    #     policy_distribution={
+    #         "careerist": 1 / 3,  # theta[4][0],
+    #         "orthodox_scientist": 1 / 3,  # theta[4][1],
+    #         "mass_producer": 1 / 3,  # theta[4][2],
+    #     },
+    #     output_file_prefix="balanced_multiply",
+    #     group_policy_homogenous=False,
+    #     acceptance_threshold=0.5,
+    #     novelty_threshold=0.4,
+    #     prestige_threshold=0.4,
+    #     effort_threshold=46,
+    #     seed=42,
+    # )
     #### version with good results...
     # run_simulation_with_policies(
     #     n_agents=1200,
@@ -330,3 +364,5 @@ if __name__ == "__main__":
     # print("\n" + "=" * 80)
     # print("Comparing different policy distributions...")
     # compare_policy_performances()
+
+    run_all_reward_functions()

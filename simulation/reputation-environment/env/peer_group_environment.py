@@ -80,6 +80,7 @@ class PeerGroupEnvironment(ParallelEnv):
         max_rewardless_steps: int = 50,
         growth_rate: float = 0.04,
         acceptance_threshold: float = 0.5,
+        reward_mode: str = "multiply",
         render_mode: Optional[str] = None,
     ) -> None:
         self.n_agents: int = max_agents
@@ -96,6 +97,7 @@ class PeerGroupEnvironment(ParallelEnv):
             sds=[52, self.max_agent_age / 4],
             rng=np.random,
         )
+        self.reward_function_name = reward_mode
         self.max_rewardless_steps: int = max_rewardless_steps
         self.growth_rate: float = growth_rate
         self.acceptance_threshold: float = acceptance_threshold
@@ -787,7 +789,13 @@ class PeerGroupEnvironment(ParallelEnv):
             )
             if reward > 0 and distances is not None:
                 new_distances.append(distances)
-            self._distribute_rewards_multiply(p, reward)
+            if self.reward_function_name == "multiply":
+                self._distribute_rewards_multiply(p, reward)
+            elif self.reward_function_name == "evenly":
+                self._distribute_rewards_evenly(p, reward)
+            elif self.reward_function_name == "by_effort":
+                self._distribute_rewards_by_effort(p, reward)
+
             p.finished = True
 
         new_projects = [p for p in due_projects if p.final_reward > 0]
