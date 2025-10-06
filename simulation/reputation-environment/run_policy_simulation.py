@@ -91,7 +91,7 @@ def run_simulation_with_policies(
         max_agent_age=750,
         max_rewardless_steps=max_rewardless_steps,
         acceptance_threshold=acceptance_threshold,
-        reward_mode=reward_function
+        reward_mode=reward_function,
     )
     if group_policy_homogenous:
         # Create agent policy assignments
@@ -246,13 +246,16 @@ def compare_policy_performances():
             f"Rewards: {stats['total_rewards_distributed']:6.2f}"
         )
 
+
 def run_all_reward_functions():
     reward_functions = ["multiply", "evenly", "by_effort"]
     seeds = range(10)  # 0 to 9 inclusive
 
     for seed in seeds:
         for reward_fn in reward_functions:
-            print(f"Running simulation for reward function '{reward_fn}' with seed {seed}...")
+            print(
+                f"Running simulation for reward function '{reward_fn}' with seed {seed}..."
+            )
 
             run_simulation_with_policies(
                 n_agents=2000,
@@ -273,10 +276,11 @@ def run_all_reward_functions():
                 prestige_threshold=0.4,
                 effort_threshold=38,
                 seed=seed,
-                reward_function=reward_fn
+                reward_function=reward_fn,
             )
 
     print("All simulations completed.")
+
 
 if __name__ == "__main__":
     # Run a single simulation with balanced policies
