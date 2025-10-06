@@ -287,7 +287,7 @@ if __name__ == "__main__":
     #     effort_threshold=34,
     # )
     run_simulation_with_policies(
-        n_agents=1200,
+        n_agents=2000,
         start_agents=200,
         max_steps=600,
         n_groups=20,
