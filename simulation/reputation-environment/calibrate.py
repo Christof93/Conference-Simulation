@@ -330,12 +330,8 @@ def calibrate(problem, real_data):
     else:
         param_space = [
             Real(*bounds[0], name=names[0]),
-            # Real(*bounds[1], name=names[1]),
-            # Real(*bounds[2], name=names[2]),
-            Integer(*bounds[3], name=names[3]),
-            Integer(*bounds[4], name=names[4]),
-            # Categorical(bounds[5], name=names[5]),  # Boolean
-            # Categorical(candidates, name="policy_population_proportions"),
+            Integer(*bounds[1], name=names[1]),
+            Integer(*bounds[2], name=names[2]),
         ]
 
     # ---- Step 2–3: Define loss function ----
@@ -401,7 +397,7 @@ def calibrate(problem, real_data):
                     # acceptance_threshold=theta[names.index("acceptance_threshold")],
                     novelty_threshold = 0.4, 
                     # novelty_threshold = theta[names.index("orthodox_novelty_threshold")],
-                    prestige_threshold = 0.29, 
+                    prestige_threshold = 0.4, 
                     # prestige_threshold = theta[names.index("careerist_prestige_threshold")],
                     effort_threshold=theta[1],
                     # effort_threshold=theta[names.index("mass_producer_effort_threshold")],
@@ -505,7 +501,7 @@ def plot_calibration_overlays(
 
 
 def main():
-    problem = {
+    sweep_1_problem = {
         "num_vars": 6,
         "names": [
             "acceptance_threshold",
@@ -524,6 +520,19 @@ def main():
             [0, 1],  # Boolean → treat as 0/1
         ],
     }
+    sweep_2_problem = {
+        "num_vars": 3,
+        "names": [
+            "acceptance_threshold",
+            "mass_producer_effort_threshold",
+            "max_rewardless_steps",
+        ],
+        "bounds": [
+            [0.2, 0.8],  # Real
+            [10, 50],  # Integer (approx. continuous for SA)
+            [50, 500],  # Integer
+        ],
+    }
     # sensitivity_analysis(problem)
     real_data = {
         "papers_per_author": np.load("papers_per_author.npy"),
@@ -533,7 +542,7 @@ def main():
         "acceptance": np.load("acceptance_histogram.npy"),
     }
 
-    calibrate(problem, real_data)
+    calibrate(sweep_2_problem, real_data)
 
 
 if __name__ == "__main__":
