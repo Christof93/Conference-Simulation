@@ -247,9 +247,8 @@ def compare_policy_performances():
         )
 
 
-def run_all_reward_functions():
+def run_all_reward_functions(seeds=range(10)):
     reward_functions = ["multiply", "evenly", "by_effort"]
-    seeds = range(10)  # 0 to 9 inclusive
 
     for seed in seeds:
         for reward_fn in reward_functions:
@@ -369,4 +368,4 @@ if __name__ == "__main__":
     # print("Comparing different policy distributions...")
     # compare_policy_performances()
 
-    run_all_reward_functions()
+    run_all_reward_functions([42])
