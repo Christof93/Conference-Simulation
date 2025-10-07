@@ -9,3 +9,5 @@ neo4j
 scipy
 scikit-optimize
 SALib
+seaborn
+pyarrow
