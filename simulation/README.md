@@ -11,10 +11,10 @@ pip install -r requirements.txt
 ```
 
 ## Run the Simulation
-Runs a single simulation with a balanced policy mix and writes logs and a summary.
+Runs a the simulation for 1 random seed and three reward functions and saves the results.
 
 ```bash
-python reputation-environment/run_policy_simulation.py
+python run_policy_simulation.py
 ```
 
 Outputs (written in the repo root and `log/`):
@@ -24,13 +24,11 @@ Outputs (written in the repo root and `log/`):
 - `log/balanced_projects.json`: final project states
 - `log/balanced_area.pickle`: serialized environment state
 
-Tune the call to `run_simulation_with_policies(...)` at the bottom of `reputation-environment/run_policy_simulation.py` to change:
+Tune the call to `run_simulation_with_policies(...)` in `reputation-environment/run_policy_simulation.py` to change:
 - `n_agents`, `max_steps`, `n_groups`, `max_peer_group_size`
 - `policy_distribution` (see `POLICY_CONFIGS` in the same file)
 - `output_file_prefix` (affects filenames)
 
-## Comparing Policy Distributions
-`compare_policy_performances()` runs a batch across the predefined `POLICY_CONFIGS`. Uncomment its call at the bottom of the script to print a compact comparison summary.
 
 ## Agent Policies (in `reputation-environment/agent_policies.py`)
 
